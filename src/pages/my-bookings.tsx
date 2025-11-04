@@ -1,0 +1,381 @@
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import api from '../lib/api';
+import { API_ENDPOINTS, APP_NAME } from '../config';
+import busLogo from '../assets/buslogo.jpg';
+import {
+  FaMapMarkerAlt,
+  FaRupeeSign,
+  FaUser,
+  FaBell,
+  FaTicketAlt,
+  FaCalendar,
+  FaTimesCircle,
+} from 'react-icons/fa';
+
+interface Booking {
+  bookingGroupId: string;
+  status: string;
+  totalPrice: number;
+  bookedAt: string;
+  trip: {
+    tripId: string;
+    tripDate: string;
+    tripStatus: string;
+  };
+  bus: {
+    busNumber: string;
+    name: string;
+    type: string;
+  };
+  route: {
+    from: {
+      name: string;
+      city: string;
+      departureTime: string | null;
+    };
+    to: {
+      name: string;
+      city: string;
+      arrivalTime: string | null;
+    };
+  };
+  seats: Array<{
+    seatNumber: string;
+    type: string;
+    level: string;
+  }>;
+}
+
+export function MyBookings() {
+  const navigate = useNavigate();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchBookings();
+    fetchUnreadCount();
+  }, [filter]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.UNREAD_COUNT);
+      setUnreadCount(response.data.unreadCount);
+    } catch (err) {
+      console.error('Failed to fetch notifications');
+    }
+  };
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const queryParam = filter === 'upcoming' ? '?upcoming=true' : '';
+      const response = await api.get(`${API_ENDPOINTS.MY_BOOKINGS}${queryParam}`);
+      
+      let allBookings = response.data.bookings || [];
+      
+      if (filter === 'past') {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Normalize to start of day
+        allBookings = allBookings.filter((booking: Booking) => {
+          // ✅ FIX: Parse YYYY-MM-DD string correctly
+          const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
+          const tripDate = new Date(year, month - 1, day);
+          return tripDate < now;
+        });
+      }
+      
+      setBookings(allBookings);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.errorMessage ||
+          'Failed to fetch bookings. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingGroupId: string) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
+    try {
+      await api.post(API_ENDPOINTS.CANCEL_TICKET, {
+        bookingGroupId,
+      });
+      alert('Booking cancelled successfully');
+      fetchBookings();
+    } catch (err: any) {
+      alert(
+        err.response?.data?.errorMessage ||
+          'Failed to cancel booking. Please try again.'
+      );
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors: Record<string, string> = {
+      CONFIRMED: 'bg-green-100 text-green-800',
+      CANCELLED: 'bg-red-100 text-red-800',
+      PENDING: 'bg-yellow-100 text-yellow-800',
+    };
+
+    return (
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+          statusColors[status] || 'bg-gray-100 text-gray-800'
+        }`}
+      >
+        {status}
+      </span>
+    );
+  };
+
+  const canCancelBooking = (booking: Booking) => {
+    // ✅ FIX: Parse YYYY-MM-DD string correctly
+    const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
+    const tripDate = new Date(year, month - 1, day);
+    const now = new Date();
+    const hoursDiff = (tripDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    return booking.status === 'CONFIRMED' && hoursDiff > 2;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header/Navbar */}
+      <nav className="bg-white shadow-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <img
+                src={busLogo}
+                alt="Logo"
+                className="w-12 h-12 rounded-full object-cover"
+              />
+              <span className="text-2xl font-bold text-indigo-900">
+                {APP_NAME}
+              </span>
+            </div>
+            <div className="flex items-center space-x-6">
+              <Link
+                to="/home"
+                className="text-gray-700 hover:text-indigo-600 font-medium"
+              >
+                Home
+              </Link>
+              <Link
+                to="/my-bookings"
+                className="text-indigo-600 font-semibold flex items-center gap-2"
+              >
+                <FaTicketAlt />
+                My Bookings
+              </Link>
+              <Link
+                to="/notifications"
+                className="relative text-gray-700 hover:text-indigo-600"
+              >
+                <FaBell className="text-xl" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
+              >
+                <FaUser />
+                Profile
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Page Header */}
+      <div className="bg-indigo-600 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold">My Bookings</h1>
+          <p className="text-indigo-100 mt-2">View and manage your bus tickets</p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filter Tabs */}
+        <div className="mb-6 flex gap-4">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-6 py-2 rounded-lg font-semibold ${
+              filter === 'all'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300'
+            }`}
+          >
+            All Bookings
+          </button>
+          <button
+            onClick={() => setFilter('upcoming')}
+            className={`px-6 py-2 rounded-lg font-semibold ${
+              filter === 'upcoming'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300'
+            }`}
+          >
+            Upcoming
+          </button>
+          <button
+            onClick={() => setFilter('past')}
+            className={`px-6 py-2 rounded-lg font-semibold ${
+              filter === 'past'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300'
+            }`}
+          >
+            Past
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading bookings...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+            <p className="text-red-700 text-lg">{error}</p>
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <FaTicketAlt className="mx-auto text-6xl text-gray-300 mb-4" />
+            <p className="text-gray-600 text-lg mb-4">No bookings found</p>
+            <button
+              onClick={() => navigate('/home')}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
+            >
+              Book Your First Ticket
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {bookings.map((booking) => (
+              <div
+                key={booking.bookingGroupId}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {booking.bus.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {booking.bus.busNumber} • {booking.bus.type}
+                    </p>
+                  </div>
+                  {getStatusBadge(booking.status)}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 mb-4">
+                  {/* Journey Details */}
+                  <div>
+                    <div className="flex items-start gap-4">
+                      <FaMapMarkerAlt className="text-green-500 mt-1" />
+                      <div>
+                        <div className="text-sm text-gray-600">From</div>
+                        <div className="font-semibold">{booking.route.from.city}</div>
+                        <div className="text-sm text-gray-600">
+                          {booking.route.from.departureTime}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="my-2 ml-2 border-l-2 border-gray-300 h-6"></div>
+                    <div className="flex items-start gap-4">
+                      <FaMapMarkerAlt className="text-red-500 mt-1" />
+                      <div>
+                        <div className="text-sm text-gray-600">To</div>
+                        <div className="font-semibold">{booking.route.to.city}</div>
+                        <div className="text-sm text-gray-600">
+                          {booking.route.to.arrivalTime}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Booking Details */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <FaCalendar className="text-indigo-600" />
+                      <div>
+                        <div className="text-sm text-gray-600">Journey Date</div>
+                        <div className="font-semibold">
+                          {(() => {
+                            // ✅ FIX: Parse YYYY-MM-DD string correctly
+                            const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
+                            const date = new Date(year, month - 1, day);
+                            return date.toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <FaTicketAlt className="text-indigo-600" />
+                      <div>
+                        <div className="text-sm text-gray-600">Seats</div>
+                        <div className="font-semibold">
+                          {booking.seats.map((s) => s.seatNumber).join(', ')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 text-gray-700">
+                      <FaRupeeSign className="text-indigo-600 mt-1" />
+                      <div>
+                        <div className="text-sm text-gray-600">Total Amount</div>
+                        <div className="font-bold text-xl text-indigo-600">
+                          {booking.totalPrice}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Booked on{' '}
+                    {new Date(booking.bookedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </div>
+                  {booking.status === 'CONFIRMED' && canCancelBooking(booking) && (
+                    <button
+                      onClick={() => handleCancelBooking(booking.bookingGroupId)}
+                      className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium flex items-center gap-2"
+                    >
+                      <FaTimesCircle />
+                      Cancel Booking
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
