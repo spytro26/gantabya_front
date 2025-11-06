@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
+import { roundToTwo, formatAmount } from '../utils/currency';
 import {
   FaArrowLeft,
   FaUser,
@@ -118,18 +119,27 @@ export function BookingPassengerPage() {
     if (!busInfo) return 0;
 
     if (seat.level === 'LOWER' && seat.type === 'SEATER') {
-      return Math.abs(
-        busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSeaterPrice -
+            busInfo.route.fromStop.lowerSeaterPrice
+        )
       );
     }
     if (seat.level === 'LOWER' && seat.type === 'SLEEPER') {
-      return Math.abs(
-        busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSleeperPrice -
+            busInfo.route.fromStop.lowerSleeperPrice
+        )
       );
     }
     if (seat.level === 'UPPER' && seat.type === 'SLEEPER') {
-      return Math.abs(
-        busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.upperSleeperPrice -
+            busInfo.route.fromStop.upperSleeperPrice
+        )
       );
     }
 
@@ -144,26 +154,41 @@ export function BookingPassengerPage() {
     .map((seatId) => allSeats.find((seat) => seat.id === seatId))
     .filter((seat): seat is Seat => Boolean(seat));
 
-  const baseAmount = selectedSeatDetails.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
-  const totalAmount = appliedCoupon?.finalAmount ?? baseAmount;
-  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const baseAmount = roundToTwo(
+    selectedSeatDetails.reduce(
+      (sum, seat) => roundToTwo(sum + getSeatPrice(seat)),
+      0
+    )
+  );
+  const discountAmount = roundToTwo(appliedCoupon?.discountAmount ?? 0);
+  const totalAmount = roundToTwo(
+    appliedCoupon?.finalAmount !== undefined ? appliedCoupon.finalAmount : baseAmount
+  );
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim() || !tripId) return;
+    const trimmedCode = couponCode.trim().toUpperCase();
+
+    if (!trimmedCode || !tripId) return;
+
+    if (baseAmount <= 0) {
+      alert('Please select seats before applying a coupon.');
+      return;
+    }
 
     try {
       const response = await api.post('/user/booking/apply-coupon', {
-        code: couponCode.trim().toUpperCase(),
+        code: trimmedCode,
         tripId,
-        totalAmount: baseAmount,
+        totalAmount: roundToTwo(baseAmount),
       });
 
       setAppliedCoupon({
         ...response.data.offer,
-        discountAmount: response.data.discountAmount,
-        finalAmount: response.data.finalAmount,
+        originalAmount: roundToTwo(response.data.originalAmount ?? baseAmount),
+        discountAmount: roundToTwo(response.data.discountAmount),
+        finalAmount: roundToTwo(response.data.finalAmount),
       });
-      alert(`Coupon applied! You saved ₹${response.data.discountAmount}`);
+      alert(`Coupon applied! You saved ₹${formatAmount(response.data.discountAmount)}`);
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || 'Invalid coupon code');
     }
@@ -304,9 +329,9 @@ export function BookingPassengerPage() {
                 <FaTicketAlt />
                 Total Fare
               </div>
-              <div className="mt-1 text-lg font-bold text-indigo-600">₹{totalAmount}</div>
+              <div className="mt-1 text-lg font-bold text-indigo-600">₹{formatAmount(totalAmount)}</div>
               {appliedCoupon && (
-                <div className="text-xs text-green-600">Saved ₹{discountAmount}</div>
+                <div className="text-xs text-green-600">Saved ₹{formatAmount(discountAmount)}</div>
               )}
             </div>
           </div>
@@ -356,7 +381,7 @@ export function BookingPassengerPage() {
                   <div className="text-sm font-semibold text-gray-900">
                     Seat {seat.seatNumber} • {seat.level} {seat.type}
                   </div>
-                  <div className="text-sm font-semibold text-indigo-600">₹{getSeatPrice(seat)}</div>
+                  <div className="text-sm font-semibold text-indigo-600">₹{formatAmount(getSeatPrice(seat))}</div>
                 </div>
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -456,15 +481,15 @@ export function BookingPassengerPage() {
               </div>
               {appliedCoupon && (
                 <div className="mt-2 text-xs text-green-600">
-                  Coupon {appliedCoupon.code} applied! You saved ₹{discountAmount}.
+                  Coupon {appliedCoupon.code} applied! You saved ₹{formatAmount(discountAmount)}.
                 </div>
               )}
             </div>
             <div className="sm:text-right">
               <div className="text-xs uppercase tracking-wide text-gray-400">Total amount</div>
-              <div className="text-2xl font-bold text-indigo-600">₹{totalAmount}</div>
+              <div className="text-2xl font-bold text-indigo-600">₹{formatAmount(totalAmount)}</div>
               {appliedCoupon && (
-                <div className="text-xs text-gray-500">Discount applied: ₹{discountAmount}</div>
+                <div className="text-xs text-gray-500">Discount applied: ₹{formatAmount(discountAmount)}</div>
               )}
             </div>
           </div>

@@ -8,6 +8,7 @@ import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
+import { roundToTwo, formatAmount } from '../utils/currency';
 import {
   FaArrowLeft,
   FaInfoCircle,
@@ -221,27 +222,39 @@ export function BookingPage() {
   };
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    const trimmedCode = couponCode.trim().toUpperCase();
+
+    if (!trimmedCode) {
+      return;
+    }
 
     if (!tripId) {
       alert('Trip ID not found');
       return;
     }
 
+    const baseAmount = calculateBaseAmount();
+
+    if (baseAmount <= 0) {
+      alert('Please select at least one seat before applying a coupon.');
+      return;
+    }
+
     try {
       const response = await api.post('/user/booking/apply-coupon', {
-        code: couponCode,
-        tripId: tripId,
-        totalAmount: getTotalAmount(),
+        code: trimmedCode,
+        tripId,
+        totalAmount: roundToTwo(baseAmount),
       });
 
       // Backend returns: { offer, originalAmount, discountAmount, finalAmount }
       setAppliedCoupon({
         ...response.data.offer,
-        discountAmount: response.data.discountAmount,
-        finalAmount: response.data.finalAmount,
+        originalAmount: roundToTwo(response.data.originalAmount ?? baseAmount),
+        discountAmount: roundToTwo(response.data.discountAmount),
+        finalAmount: roundToTwo(response.data.finalAmount),
       });
-      alert(`Coupon applied! You saved ₹${response.data.discountAmount}`);
+      alert(`Coupon applied! You saved ₹${formatAmount(response.data.discountAmount)}`);
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || 'Invalid coupon code');
     }
@@ -302,43 +315,62 @@ export function BookingPage() {
 
   const getSeatPrice = (seat: Seat): number => {
     if (!busInfo) return 0;
-    
+
     // Calculate journey price = toStop price - fromStop price
     // Both prices are cumulative from origin, so difference gives journey price
     if (seat.level === 'LOWER' && seat.type === 'SEATER') {
-      return Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice);
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSeaterPrice -
+            busInfo.route.fromStop.lowerSeaterPrice
+        )
+      );
     } else if (seat.level === 'LOWER' && seat.type === 'SLEEPER') {
-      return Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice);
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSleeperPrice -
+            busInfo.route.fromStop.lowerSleeperPrice
+        )
+      );
     } else if (seat.level === 'UPPER' && seat.type === 'SLEEPER') {
-      return Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice);
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.upperSleeperPrice -
+            busInfo.route.fromStop.upperSleeperPrice
+        )
+      );
     }
     return 0;
   };
 
-  const getTotalAmount = () => {
+  const calculateBaseAmount = () => {
     if (!busInfo) return 0;
-    
-    // Calculate base amount based on seat-specific pricing
+
     const allSeats = [...busInfo.seats.lowerDeck, ...busInfo.seats.upperDeck];
-    const baseAmount = selectedSeats.reduce((total, seatId) => {
+    const total = selectedSeats.reduce((sum, seatId) => {
       const seat = allSeats.find((s) => s.id === seatId);
-      if (seat) {
-        return total + getSeatPrice(seat);
+      if (!seat) {
+        return sum;
       }
-      return total;
+      return roundToTwo(sum + getSeatPrice(seat));
     }, 0);
-    
-    // If coupon was applied and we have the finalAmount from backend, use it
+
+    return roundToTwo(total);
+  };
+
+  const getTotalAmount = () => {
+    const baseAmount = calculateBaseAmount();
+
     if (appliedCoupon && appliedCoupon.finalAmount !== undefined) {
-      return appliedCoupon.finalAmount;
+      return roundToTwo(appliedCoupon.finalAmount);
     }
-    
+
     return baseAmount;
   };
 
   const getDiscountAmount = () => {
     if (!appliedCoupon || !appliedCoupon.discountAmount) return 0;
-    return appliedCoupon.discountAmount;
+    return roundToTwo(appliedCoupon.discountAmount);
   };
 
   const getSelectedSeatsInfo = (): Seat[] => {
@@ -352,16 +384,31 @@ export function BookingPage() {
   const getMinimumSeatPrice = () => {
     if (!busInfo) return 0;
     const prices = [
-      Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice),
-      Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice),
-      Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice),
+      roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSeaterPrice -
+            busInfo.route.fromStop.lowerSeaterPrice
+        )
+      ),
+      roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSleeperPrice -
+            busInfo.route.fromStop.lowerSleeperPrice
+        )
+      ),
+      roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.upperSleeperPrice -
+            busInfo.route.fromStop.upperSleeperPrice
+        )
+      ),
     ].filter((price) => price > 0);
 
     if (prices.length === 0) {
       return 0;
     }
 
-    return Math.min(...prices);
+    return roundToTwo(Math.min(...prices));
   };
 
   const bottomSheetPeekHeight = selectedSeats.length > 0 ? 220 : 160;
@@ -696,6 +743,9 @@ export function BookingPage() {
   const selectedDroppingPoint = busInfo?.route.droppingPoints?.find(
     (point) => point.id === selectedDroppingPointId
   );
+  const subtotal = calculateBaseAmount();
+  const discountAmountValue = getDiscountAmount();
+  const totalAmountValue = getTotalAmount();
   const currentSeatId = selectedSeats[currentSeatStep] || '';
   const currentSeatDetails = seatDetails[currentSeatStep] || null;
   const currentPassengerDetails = currentSeatId
@@ -885,7 +935,11 @@ export function BookingPage() {
               <div className="text-right">
                 <div className="text-[11px] uppercase tracking-wide text-gray-400">{selectedSeats.length > 0 ? 'Your total' : 'Starts at'}</div>
                 <div className="text-lg font-bold text-indigo-600">
-                  ₹{selectedSeats.length > 0 ? getTotalAmount() : getMinimumSeatPrice()}
+                  ₹{
+                    selectedSeats.length > 0
+                      ? formatAmount(totalAmountValue)
+                      : formatAmount(getMinimumSeatPrice())
+                  }
                 </div>
                 {selectedSeats.length > 0 && (
                   <div className="text-[10px] text-gray-400">
@@ -936,15 +990,30 @@ export function BookingPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Seater</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice)}</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.lowerSeaterPrice -
+                            busInfo.route.fromStop.lowerSeaterPrice
+                        )
+                      )}</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Sleeper</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice)}</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.lowerSleeperPrice -
+                            busInfo.route.fromStop.lowerSleeperPrice
+                        )
+                      )}</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Upper Sleeper</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice)}</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.upperSleeperPrice -
+                            busInfo.route.fromStop.upperSleeperPrice
+                        )
+                      )}</span>
                     </div>
                   </div>
                 </div>
@@ -1037,15 +1106,30 @@ export function BookingPage() {
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Lower Seater</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice)}</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.lowerSeaterPrice -
+                            busInfo.route.fromStop.lowerSeaterPrice
+                        )
+                      )}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Lower Sleeper</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice)}</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.lowerSleeperPrice -
+                            busInfo.route.fromStop.lowerSleeperPrice
+                        )
+                      )}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Upper Sleeper</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice)}</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                        Math.abs(
+                          busInfo.route.toStop.upperSleeperPrice -
+                            busInfo.route.fromStop.upperSleeperPrice
+                        )
+                      )}</span>
                     </div>
                   </div>
                 </div>
@@ -1106,7 +1190,7 @@ export function BookingPage() {
                           {seat.level} • {seat.type}
                         </div>
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-indigo-700">₹{getSeatPrice(seat)}</span>
+                      <span className="text-xs sm:text-sm font-semibold text-indigo-700">₹{formatAmount(getSeatPrice(seat))}</span>
                     </div>
                   ))}
                 </div>
@@ -1135,19 +1219,19 @@ export function BookingPage() {
                 <div className="space-y-2 text-xs sm:text-sm text-gray-600">
                   <div className="flex justify-between font-medium">
                     <span>Subtotal</span>
-                    <span>₹{seatDetails.reduce((total, seat) => total + getSeatPrice(seat), 0)}</span>
+                    <span>₹{formatAmount(subtotal)}</span>
                   </div>
                   {appliedCoupon && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount ({appliedCoupon.code})</span>
                       <span>
-                        -₹{getDiscountAmount().toFixed(2)}
+                        -₹{formatAmount(discountAmountValue)}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
                     <span>Total</span>
-                    <span className="text-indigo-600">₹{getTotalAmount()}</span>
+                    <span className="text-indigo-600">₹{formatAmount(totalAmountValue)}</span>
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
+import { roundToTwo, formatAmount } from '../utils/currency';
 import {
   FaArrowLeft,
   FaBus,
@@ -106,18 +107,27 @@ export function BookingBoardingPage() {
     if (!busInfo) return 0;
 
     if (seat.level === 'LOWER' && seat.type === 'SEATER') {
-      return Math.abs(
-        busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSeaterPrice -
+            busInfo.route.fromStop.lowerSeaterPrice
+        )
       );
     }
     if (seat.level === 'LOWER' && seat.type === 'SLEEPER') {
-      return Math.abs(
-        busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.lowerSleeperPrice -
+            busInfo.route.fromStop.lowerSleeperPrice
+        )
       );
     }
     if (seat.level === 'UPPER' && seat.type === 'SLEEPER') {
-      return Math.abs(
-        busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice
+      return roundToTwo(
+        Math.abs(
+          busInfo.route.toStop.upperSleeperPrice -
+            busInfo.route.fromStop.upperSleeperPrice
+        )
       );
     }
 
@@ -128,9 +138,11 @@ export function BookingBoardingPage() {
     .map((seatId) => allSeats.find((seat) => seat.id === seatId))
     .filter((seat): seat is Seat => Boolean(seat));
 
-  const totalAmount = selectedSeatDetails.reduce(
-    (sum, seat) => sum + getSeatPrice(seat),
-    0
+  const totalAmount = roundToTwo(
+    selectedSeatDetails.reduce(
+      (sum, seat) => roundToTwo(sum + getSeatPrice(seat)),
+      0
+    )
   );
 
   const handleContinue = () => {
@@ -367,7 +379,7 @@ export function BookingBoardingPage() {
             </div>
             <div className="text-right">
               <div className="text-xs uppercase tracking-wide text-gray-400">Estimated fare</div>
-              <div className="text-lg font-bold text-indigo-600">₹{totalAmount}</div>
+              <div className="text-lg font-bold text-indigo-600">₹{formatAmount(totalAmount)}</div>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
