@@ -255,14 +255,25 @@ export function BookingPage() {
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
 
+    if (!tripId) {
+      alert('Trip ID not found');
+      return;
+    }
+
     try {
-      const response = await api.post('/user/applycoupon', {
-        couponCode,
-        bookingAmount: getTotalAmount(),
+      const response = await api.post('/user/booking/apply-coupon', {
+        code: couponCode,
+        tripId: tripId,
+        totalAmount: getTotalAmount(),
       });
 
-      setAppliedCoupon(response.data.coupon);
-      alert(`Coupon applied! You saved ₹${response.data.discount}`);
+      // Backend returns: { offer, originalAmount, discountAmount, finalAmount }
+      setAppliedCoupon({
+        ...response.data.offer,
+        discountAmount: response.data.discountAmount,
+        finalAmount: response.data.finalAmount,
+      });
+      alert(`Coupon applied! You saved ₹${response.data.discountAmount}`);
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || 'Invalid coupon code');
     }
@@ -347,13 +358,17 @@ export function BookingPage() {
       return total;
     }, 0);
     
-    if (appliedCoupon) {
-      const discount = appliedCoupon.discountType === 'PERCENTAGE'
-        ? (baseAmount * appliedCoupon.discountValue) / 100
-        : appliedCoupon.discountValue;
-      return baseAmount - Math.min(discount, appliedCoupon.maxDiscount || discount);
+    // If coupon was applied and we have the finalAmount from backend, use it
+    if (appliedCoupon && appliedCoupon.finalAmount !== undefined) {
+      return appliedCoupon.finalAmount;
     }
+    
     return baseAmount;
+  };
+
+  const getDiscountAmount = () => {
+    if (!appliedCoupon || !appliedCoupon.discountAmount) return 0;
+    return appliedCoupon.discountAmount;
   };
 
   const getSelectedSeatsInfo = (): Seat[] => {
@@ -930,8 +945,7 @@ export function BookingPage() {
                     <div className="flex justify-between text-green-600">
                       <span>Discount ({appliedCoupon.code})</span>
                       <span>
-                        -₹
-                        {(seatDetails.reduce((total, seat) => total + getSeatPrice(seat), 0) - getTotalAmount()).toFixed(2)}
+                        -₹{getDiscountAmount().toFixed(2)}
                       </span>
                     </div>
                   )}
