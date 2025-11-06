@@ -111,7 +111,7 @@ export function UserHome() {
               <img
                 src={busLogo}
                 alt="Logo"
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-16 h-16 rounded-full object-cover"
               />
               <span className="text-2xl font-bold text-indigo-900">
                 {APP_NAME}

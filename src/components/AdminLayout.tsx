@@ -13,10 +13,11 @@ import {
   FaShieldAlt,
 } from 'react-icons/fa';
 import buslogo from '../assets/buslogo.jpg';
-import { APP_NAME } from '../config';
+import { APP_NAME, API_ENDPOINTS } from '../config';
+import api from '../lib/api';
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 interface MenuItem {
@@ -30,6 +31,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [serviceName, setServiceName] = useState('Ankush Travels');
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,6 +47,35 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const fetchServiceName = async () => {
+      try {
+  const response = await api.get(API_ENDPOINTS.ADMIN_SERVICE_NAME);
+        if (response.data?.serviceName) {
+          setServiceName(response.data.serviceName);
+        }
+      } catch (error) {
+        console.error('Failed to fetch service name', error);
+      }
+    };
+
+    fetchServiceName();
+  }, []);
+
+  useEffect(() => {
+    const handleServiceNameUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      if (typeof customEvent.detail === 'string' && customEvent.detail.trim()) {
+        setServiceName(customEvent.detail);
+      }
+    };
+
+    window.addEventListener('service-name-updated', handleServiceNameUpdated);
+    return () => {
+      window.removeEventListener('service-name-updated', handleServiceNameUpdated);
+    };
   }, []);
 
   const menuItems: MenuItem[] = [
@@ -106,7 +137,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <img
                   src={buslogo}
                   alt={APP_NAME}
-                  className="h-14 w-14 rounded-full border-2 border-yellow-500"
+                  className="h-10 w-10 rounded-full border-2 border-yellow-500"
                 />
                 <div className="absolute -top-1 -right-1 bg-yellow-500 text-slate-900 rounded-full p-1">
                   <FaShieldAlt className="text-xs" />
@@ -114,7 +145,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold">{APP_NAME}</h1>
-                <p className="text-xs text-gray-400">Admin Panel</p>
+                <p className="text-xs text-gray-400">{serviceName}</p>
               </div>
             </div>
           </div>

@@ -12,8 +12,13 @@ import {
 } from 'react-icons/fa';
 import AdminLayout from '../components/AdminLayout';
 import api from '../lib/api';
+import { API_ENDPOINTS } from '../config';
 
 interface DashboardData {
+  serviceProfile: {
+    adminName: string;
+    busServiceName: string;
+  };
   overview: {
     totalBuses: number;
     totalTrips: number;
@@ -47,6 +52,11 @@ const AdminDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [serviceName, setServiceName] = useState('Ankush Travels');
+  const [serviceNameDraft, setServiceNameDraft] = useState('Ankush Travels');
+  const [serviceNameSaving, setServiceNameSaving] = useState(false);
+  const [serviceNameMessage, setServiceNameMessage] = useState('');
+  const [serviceNameError, setServiceNameError] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -54,12 +64,58 @@ const AdminDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/admin/dashboard');
+  const response = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD);
       setData(response.data);
+      const service = response.data?.serviceProfile?.busServiceName || 'Ankush Travels';
+      setServiceName(service);
+      setServiceNameDraft(service);
     } catch (err: any) {
       setError(err.response?.data?.errorMessage || 'Failed to load dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleServiceNameSave = async () => {
+    setServiceNameError('');
+    setServiceNameMessage('');
+
+    const trimmed = serviceNameDraft.trim();
+    if (trimmed.length < 3) {
+      setServiceNameError('Service name must be at least 3 characters long');
+      return;
+    }
+
+    setServiceNameSaving(true);
+
+    try {
+  const response = await api.put(API_ENDPOINTS.ADMIN_SERVICE_NAME, {
+        serviceName: trimmed,
+      });
+      const updatedName = response.data?.serviceName || trimmed;
+      setServiceName(updatedName);
+      setServiceNameDraft(updatedName);
+      setServiceNameMessage('Service name updated successfully');
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              serviceProfile: {
+                ...prev.serviceProfile,
+                busServiceName: updatedName,
+              },
+            }
+          : prev
+      );
+      window.dispatchEvent(
+        new CustomEvent('service-name-updated', {
+          detail: updatedName,
+        })
+      );
+    } catch (err: any) {
+      setServiceNameError(err.response?.data?.errorMessage || 'Failed to update service name');
+    } finally {
+      setServiceNameSaving(false);
     }
   };
 
@@ -83,7 +139,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  const { overview, busStatistics, recentBookings } = data;
+  const { overview, busStatistics, recentBookings, serviceProfile } = data;
 
   return (
     <AdminLayout>
@@ -109,6 +165,54 @@ const AdminDashboard: React.FC = () => {
               <FaCalendarPlus />
               <span>Add Trip</span>
             </Link>
+          </div>
+        </div>
+
+        {/* Service Branding */}
+        <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Bus Service Branding</h2>
+              <p className="text-gray-600 mt-1">
+                This name appears across the booking experience for your passengers.
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Admin: {serviceProfile.adminName || '—'}
+              </p>
+            </div>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+              <input
+                type="text"
+                value={serviceNameDraft}
+                onChange={(e) => setServiceNameDraft(e.target.value)}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                placeholder="e.g., Ankush Travels"
+              />
+              <button
+                onClick={handleServiceNameSave}
+                disabled={serviceNameSaving}
+                className="px-5 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {serviceNameSaving ? 'Saving...' : 'Update Name'}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-gray-500">
+              Current display name: <span className="font-semibold text-gray-800">{serviceName}</span>
+            </p>
+            <div className="space-y-2 sm:space-y-0 sm:space-x-3">
+              {serviceNameError && (
+                <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-lg inline-block">
+                  {serviceNameError}
+                </span>
+              )}
+              {serviceNameMessage && (
+                <span className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-lg inline-block">
+                  {serviceNameMessage}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

@@ -9,6 +9,15 @@ interface Bus {
   name: string;
 }
 
+interface BoardingPoint {
+  id?: string;
+  name: string;
+  time: string;
+  landmark: string;
+  address: string;
+  pointOrder?: number;
+}
+
 interface Stop {
   name: string;
   city: string;
@@ -23,7 +32,17 @@ interface Stop {
   lowerSeaterPrice: number;
   lowerSleeperPrice: number;
   upperSleeperPrice: number;
+  boardingPoints: BoardingPoint[];
 }
+
+const createEmptyBoardingPoint = (): BoardingPoint => ({
+  id: undefined,
+  name: '',
+  time: '',
+  landmark: '',
+  address: '',
+  pointOrder: 0,
+});
 
 const RouteManagement: React.FC = () => {
   const [buses, setBuses] = useState<Bus[]>([]);
@@ -43,6 +62,7 @@ const RouteManagement: React.FC = () => {
       lowerSeaterPrice: 0,
       lowerSleeperPrice: 0,
       upperSleeperPrice: 0,
+        boardingPoints: [createEmptyBoardingPoint()],
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +92,7 @@ const RouteManagement: React.FC = () => {
     try {
       const response = await api.get(`/admin/bus/${selectedBus}/stops`);
       if (response.data.stops.length > 0) {
-        setStops(response.data.stops);
+        setStops(normalizeStops(response.data.stops));
       }
     } catch (err: any) {
       // No stops yet, keep default
@@ -81,44 +101,50 @@ const RouteManagement: React.FC = () => {
 
   const handleBusChange = (busId: string) => {
     setSelectedBus(busId);
-    setStops([
-      {
-        name: '',
-        city: '',
-        state: '',
-        stopIndex: 0,
-        arrivalTime: '',
-        departureTime: '',
-        returnArrivalTime: '',
-        returnDepartureTime: '',
-        distanceFromOrigin: 0,
-        priceFromOrigin: 0,
-        lowerSeaterPrice: 0,
-        lowerSleeperPrice: 0,
-        upperSleeperPrice: 0,
-      },
-    ]);
+    setStops(
+      normalizeStops([
+        {
+          name: '',
+          city: '',
+          state: '',
+          stopIndex: 0,
+          arrivalTime: '',
+          departureTime: '',
+          returnArrivalTime: '',
+          returnDepartureTime: '',
+          distanceFromOrigin: 0,
+          priceFromOrigin: 0,
+          lowerSeaterPrice: 0,
+          lowerSleeperPrice: 0,
+          upperSleeperPrice: 0,
+          boardingPoints: [createEmptyBoardingPoint()],
+        },
+      ])
+    );
   };
 
   const addStop = () => {
-    setStops([
-      ...stops,
-      {
-        name: '',
-        city: '',
-        state: '',
-        stopIndex: stops.length,
-        arrivalTime: '',
-        departureTime: '',
-        returnArrivalTime: '',
-        returnDepartureTime: '',
-        distanceFromOrigin: 0,
-        priceFromOrigin: 0,
-        lowerSeaterPrice: 0,
-        lowerSleeperPrice: 0,
-        upperSleeperPrice: 0,
-      },
-    ]);
+    setStops(
+      normalizeStops([
+        ...stops,
+        {
+          name: '',
+          city: '',
+          state: '',
+          stopIndex: stops.length,
+          arrivalTime: '',
+          departureTime: '',
+          returnArrivalTime: '',
+          returnDepartureTime: '',
+          distanceFromOrigin: 0,
+          priceFromOrigin: 0,
+          lowerSeaterPrice: 0,
+          lowerSleeperPrice: 0,
+          upperSleeperPrice: 0,
+          boardingPoints: [createEmptyBoardingPoint()],
+        },
+      ])
+    );
   };
 
   const removeStop = (index: number) => {
@@ -126,13 +152,54 @@ const RouteManagement: React.FC = () => {
       alert('Route must have at least 2 stops');
       return;
     }
-    setStops(stops.filter((_, i) => i !== index).map((stop, i) => ({ ...stop, stopIndex: i })));
+    setStops(
+      normalizeStops(
+        stops
+          .filter((_, i) => i !== index)
+          .map((stop, i) => ({ ...stop, stopIndex: i }))
+      )
+    );
   };
 
   const updateStop = (index: number, field: keyof Stop, value: any) => {
     const newStops = [...stops];
     newStops[index] = { ...newStops[index], [field]: value };
+    setStops(normalizeStops(newStops));
+  };
+
+  const updateBoardingPoint = (
+    stopIndex: number,
+    pointIndex: number,
+    field: keyof BoardingPoint,
+    value: string
+  ) => {
+    const newStops = [...stops];
+    const stop = { ...newStops[stopIndex] };
+    const points = [...stop.boardingPoints];
+    const point = { ...points[pointIndex], [field]: value };
+    points[pointIndex] = point;
+    stop.boardingPoints = points;
+    newStops[stopIndex] = stop;
     setStops(newStops);
+  };
+
+  const addBoardingPoint = (stopIndex: number) => {
+    const newStops = [...stops];
+    const stop = { ...newStops[stopIndex] };
+    stop.boardingPoints = [...stop.boardingPoints, createEmptyBoardingPoint()];
+    newStops[stopIndex] = stop;
+    setStops(normalizeStops(newStops));
+  };
+
+  const removeBoardingPoint = (stopIndex: number, pointIndex: number) => {
+    const newStops = [...stops];
+    const stop = { ...newStops[stopIndex] };
+    if (stop.boardingPoints.length <= 1) {
+      return;
+    }
+    stop.boardingPoints = stop.boardingPoints.filter((_, idx) => idx !== pointIndex);
+    newStops[stopIndex] = stop;
+    setStops(normalizeStops(newStops));
   };
 
   // Helper to parse number input - returns empty string if invalid, otherwise the number
@@ -143,6 +210,52 @@ const RouteManagement: React.FC = () => {
     const parsed = parseFloat(value);
     return isNaN(parsed) ? 0 : parsed;
   };
+
+  const normalizeStops = (inputStops: Stop[]): Stop[] =>
+    inputStops.map((stop, index) => {
+      const distance = index === 0 ? 0 : Number(stop.distanceFromOrigin ?? 0);
+      const lowerSeater = index === 0 ? 0 : Number(stop.lowerSeaterPrice ?? 0);
+      const lowerSleeper = index === 0 ? 0 : Number(stop.lowerSleeperPrice ?? 0);
+      const upperSleeper = index === 0 ? 0 : Number(stop.upperSleeperPrice ?? 0);
+      const normalizedBoardingPoints = Array.isArray(stop.boardingPoints)
+        ? stop.boardingPoints.map((point, pointIndex) => ({
+            id: point.id,
+            name:
+              typeof point.name === 'string' ? point.name.trim() : '',
+            time:
+              typeof point.time === 'string' ? point.time.trim() : '',
+            landmark:
+              typeof point.landmark === 'string' ? point.landmark.trim() : '',
+            address:
+              typeof point.address === 'string' ? point.address.trim() : '',
+            pointOrder:
+              typeof point.pointOrder === 'number' ? point.pointOrder : pointIndex,
+          }))
+        : [createEmptyBoardingPoint()];
+
+      if (normalizedBoardingPoints.length === 0) {
+        normalizedBoardingPoints.push(createEmptyBoardingPoint());
+      }
+
+      return {
+        ...stop,
+        stopIndex: index,
+        distanceFromOrigin: Number.isFinite(distance) ? distance : 0,
+        lowerSeaterPrice: Number.isFinite(lowerSeater) ? lowerSeater : 0,
+        lowerSleeperPrice: Number.isFinite(lowerSleeper) ? lowerSleeper : 0,
+        upperSleeperPrice: Number.isFinite(upperSleeper) ? upperSleeper : 0,
+        boardingPoints: normalizedBoardingPoints.map((point, order) => ({
+          ...point,
+          pointOrder: order,
+        })),
+        priceFromOrigin:
+          index === 0
+            ? 0
+            : Number.isFinite(lowerSeater)
+            ? lowerSeater
+            : 0,
+      };
+    });
 
   const handleSave = async () => {
     if (!selectedBus) {
@@ -155,9 +268,11 @@ const RouteManagement: React.FC = () => {
       return;
     }
 
+    const normalizedStops = normalizeStops(stops);
+
     // Validate all stops
-    for (let i = 0; i < stops.length; i++) {
-      const stop = stops[i];
+    for (let i = 0; i < normalizedStops.length; i++) {
+      const stop = normalizedStops[i];
       
       // Basic validation
       if (!stop.name || !stop.city) {
@@ -176,9 +291,9 @@ const RouteManagement: React.FC = () => {
       }
       
       // Check arrival is after previous departure
-      if (i > 0 && stop.arrivalTime && stops[i - 1].departureTime) {
-        if (stop.arrivalTime <= stops[i - 1].departureTime) {
-          setError(`Stop ${i + 1}: Arrival time (${stop.arrivalTime}) must be after Stop ${i}'s departure time (${stops[i - 1].departureTime})`);
+      if (i > 0 && stop.arrivalTime && normalizedStops[i - 1].departureTime) {
+        if (stop.arrivalTime <= normalizedStops[i - 1].departureTime) {
+          setError(`Stop ${i + 1}: Arrival time (${stop.arrivalTime}) must be after Stop ${i}'s departure time (${normalizedStops[i - 1].departureTime})`);
           return;
         }
       }
@@ -199,16 +314,42 @@ const RouteManagement: React.FC = () => {
 
       if (i > 0) {
         // Each stop's prices must be >= previous stop's prices (cumulative)
-        if (stop.lowerSeaterPrice < stops[i - 1].lowerSeaterPrice) {
-          setError(`Stop ${i + 1}: Lower Seater price (₹${stop.lowerSeaterPrice}) must be >= previous stop's price (₹${stops[i - 1].lowerSeaterPrice})`);
+        if (stop.lowerSeaterPrice < normalizedStops[i - 1].lowerSeaterPrice) {
+          setError(`Stop ${i + 1}: Lower Seater price (₹${stop.lowerSeaterPrice}) must be >= previous stop's price (₹${normalizedStops[i - 1].lowerSeaterPrice})`);
           return;
         }
-        if (stop.lowerSleeperPrice < stops[i - 1].lowerSleeperPrice) {
-          setError(`Stop ${i + 1}: Lower Sleeper price (₹${stop.lowerSleeperPrice}) must be >= previous stop's price (₹${stops[i - 1].lowerSleeperPrice})`);
+        if (stop.lowerSleeperPrice < normalizedStops[i - 1].lowerSleeperPrice) {
+          setError(`Stop ${i + 1}: Lower Sleeper price (₹${stop.lowerSleeperPrice}) must be >= previous stop's price (₹${normalizedStops[i - 1].lowerSleeperPrice})`);
           return;
         }
-        if (stop.upperSleeperPrice < stops[i - 1].upperSleeperPrice) {
-          setError(`Stop ${i + 1}: Upper Sleeper price (₹${stop.upperSleeperPrice}) must be >= previous stop's price (₹${stops[i - 1].upperSleeperPrice})`);
+        if (stop.upperSleeperPrice < normalizedStops[i - 1].upperSleeperPrice) {
+          setError(`Stop ${i + 1}: Upper Sleeper price (₹${stop.upperSleeperPrice}) must be >= previous stop's price (₹${normalizedStops[i - 1].upperSleeperPrice})`);
+          return;
+        }
+        if (stop.distanceFromOrigin <= normalizedStops[i - 1].distanceFromOrigin) {
+          setError(`Stop ${i + 1}: Distance (${stop.distanceFromOrigin} km) must be greater than previous stop's distance (${normalizedStops[i - 1].distanceFromOrigin} km)`);
+          return;
+        }
+      }
+
+      if (i > 0 && !stop.distanceFromOrigin) {
+        setError(`Stop ${i + 1}: Distance from origin is required`);
+        return;
+      }
+
+      if (!Array.isArray(stop.boardingPoints) || stop.boardingPoints.length === 0) {
+        setError(`Stop ${i + 1}: Add at least one boarding point`);
+        return;
+      }
+
+      for (let j = 0; j < stop.boardingPoints.length; j++) {
+        const point = stop.boardingPoints[j];
+        if (!point.name) {
+          setError(`Stop ${i + 1}: Boarding point ${j + 1} name is required`);
+          return;
+        }
+        if (!point.time) {
+          setError(`Stop ${i + 1}: Boarding point ${j + 1} time is required`);
           return;
         }
       }
@@ -219,7 +360,8 @@ const RouteManagement: React.FC = () => {
     setSuccess('');
 
     try {
-      await api.post(`/admin/bus/${selectedBus}/stops`, { stops });
+      await api.post(`/admin/bus/${selectedBus}/stops`, { stops: normalizedStops });
+      setStops(normalizedStops);
       setSuccess('Route saved successfully! Trips are auto-generated, just add holiday exceptions.');
     } catch (err: any) {
       setError(err.response?.data?.errorMessage || 'Failed to save route');
@@ -241,18 +383,6 @@ const RouteManagement: React.FC = () => {
             Set up stops with cumulative pricing. System auto-calculates point-to-point fares.
           </p>
         </div>
-
-        {/* Messages */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-            {success}
-          </div>
-        )}
 
         {/* Bus Selector */}
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -295,36 +425,60 @@ const RouteManagement: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-800">Route Stops</h2>
-              <button
-                onClick={addStop}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center space-x-2"
-              >
-                <FaPlus />
-                <span>Add Stop</span>
-              </button>
             </div>
 
-            {stops.map((stop, index) => (
-              <div key={index} className="border-2 border-gray-200 rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-                    <FaMapMarkerAlt className={index === 0 ? 'text-green-600' : index === stops.length - 1 ? 'text-red-600' : 'text-blue-600'} />
-                    <span>
-                      Stop {index + 1}{' '}
-                      {index === 0 && '(Origin)'}
-                      {index === stops.length - 1 && '(Destination)'}
-                    </span>
-                  </h3>
-                  {stops.length > 2 && (
-                    <button
-                      onClick={() => removeStop(index)}
-                      className="text-red-600 hover:text-red-700 flex items-center space-x-1"
-                    >
-                      <FaMinus />
-                      <span className="text-sm">Remove</span>
-                    </button>
-                  )}
-                </div>
+            {/* Stops List with Visual Separation */}
+            <div className="space-y-6">
+              {stops.map((stop, index) => {
+                // Color scheme based on stop position
+                const isOrigin = index === 0;
+                const isDestination = index === stops.length - 1;
+                const isIntermediate = !isOrigin && !isDestination;
+                
+                let borderColor = 'border-gray-300';
+                let bgColor = 'bg-white';
+                let iconColor = 'text-gray-600';
+                let labelBg = 'bg-gray-100';
+                
+                if (isOrigin) {
+                  borderColor = 'border-green-400';
+                  bgColor = 'bg-green-50/30';
+                  iconColor = 'text-green-600';
+                  labelBg = 'bg-green-100';
+                } else if (isDestination) {
+                  borderColor = 'border-red-400';
+                  bgColor = 'bg-red-50/30';
+                  iconColor = 'text-red-600';
+                  labelBg = 'bg-red-100';
+                } else {
+                  borderColor = 'border-blue-400';
+                  bgColor = 'bg-blue-50/30';
+                  iconColor = 'text-blue-600';
+                  labelBg = 'bg-blue-100';
+                }
+
+                return (
+                  <div key={index} className={`border-2 ${borderColor} ${bgColor} rounded-xl p-6 space-y-4 shadow-sm`}>
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 flex items-center space-x-3">
+                        <FaMapMarkerAlt className={`${iconColor} text-xl`} />
+                        <span className={`px-3 py-1 rounded-lg ${labelBg} text-sm font-semibold`}>
+                          Stop {index + 1}{' '}
+                          {isOrigin && '(Origin)'}
+                          {isDestination && '(Destination)'}
+                          {isIntermediate && '(Via)'}
+                        </span>
+                      </h3>
+                      {stops.length > 2 && (
+                        <button
+                          onClick={() => removeStop(index)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100 px-3 py-1 rounded-lg transition flex items-center space-x-1"
+                        >
+                          <FaMinus />
+                          <span className="text-sm font-medium">Remove Stop</span>
+                        </button>
+                      )}
+                    </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
@@ -447,13 +601,107 @@ const RouteManagement: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={stop.distanceFromOrigin === 0 ? '' : stop.distanceFromOrigin}
+                      value={index === 0 ? 0 : stop.distanceFromOrigin > 0 ? stop.distanceFromOrigin : ''}
                       onChange={(e) => updateStop(index, 'distanceFromOrigin', parseNumberInput(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                      placeholder="Enter distance (e.g., 150)"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 ${index === 0 ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
+                      placeholder={index === 0 ? 'Origin auto-set to 0 km' : 'Enter distance (e.g., 150)'}
                       min="0"
                       step="0.1"
+                      disabled={index === 0}
                     />
+                    {index === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">Origin distance is always 0 km.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Boarding Points */}
+                <div className="border-t border-green-200 pt-4 space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-green-700">🚌 Boarding Points</h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Add one or more pickup locations for this stop. Drop location for passengers will use the boarding point of their destination stop automatically.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => addBoardingPoint(index)}
+                      className="inline-flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                    >
+                      <FaPlus className="text-sm" />
+                      <span>Add Boarding Point</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {stop.boardingPoints.map((point, pointIndex) => (
+                      <div key={point.id || pointIndex} className="border border-green-100 rounded-lg p-4 bg-green-50/40">
+                        <div className="flex justify-between items-center mb-4">
+                          <h5 className="text-sm font-semibold text-green-700">
+                            Boarding Point {pointIndex + 1}
+                          </h5>
+                          {stop.boardingPoints.length > 1 && (
+                            <button
+                              onClick={() => removeBoardingPoint(index, pointIndex)}
+                              className="text-red-600 text-xs font-semibold hover:text-red-700 flex items-center space-x-1"
+                            >
+                              <FaMinus />
+                              <span>Remove</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={point.name}
+                              onChange={(e) => updateBoardingPoint(index, pointIndex, 'name', e.target.value)}
+                              className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                              placeholder="e.g., Baner Orange Square"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Time <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="time"
+                              value={point.time}
+                              onChange={(e) => updateBoardingPoint(index, pointIndex, 'time', e.target.value)}
+                              className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Landmark
+                            </label>
+                            <input
+                              type="text"
+                              value={point.landmark}
+                              onChange={(e) => updateBoardingPoint(index, pointIndex, 'landmark', e.target.value)}
+                              className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                              placeholder="Near Metro Station"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Address
+                            </label>
+                            <textarea
+                              value={point.address}
+                              onChange={(e) => updateBoardingPoint(index, pointIndex, 'address', e.target.value)}
+                              className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                              placeholder="Full pickup address"
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -472,12 +720,17 @@ const RouteManagement: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        value={stop.lowerSeaterPrice === 0 ? '' : stop.lowerSeaterPrice}
+                        value={index === 0 ? 0 : stop.lowerSeaterPrice > 0 ? stop.lowerSeaterPrice : ''}
                         onChange={(e) => updateStop(index, 'lowerSeaterPrice', parseNumberInput(e.target.value))}
-                        className="w-full px-3 py-2 border-2 border-blue-300 bg-blue-50 rounded-lg focus:ring-2 focus:ring-blue-500 font-semibold"
-                        placeholder="e.g., 500"
+                        className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 font-semibold ${
+                          index === 0
+                            ? 'border-blue-200 bg-blue-50 text-gray-500 cursor-not-allowed'
+                            : 'border-blue-300 bg-blue-50'
+                        }`}
+                        placeholder={index === 0 ? 'Origin auto-set to ₹0' : 'e.g., 500'}
                         min="0"
                         step="0.01"
+                        disabled={index === 0}
                       />
                       <p className="text-xs text-gray-500 mt-1">Lower deck seater cumulative price</p>
                     </div>
@@ -487,12 +740,17 @@ const RouteManagement: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        value={stop.lowerSleeperPrice === 0 ? '' : stop.lowerSleeperPrice}
+                        value={index === 0 ? 0 : stop.lowerSleeperPrice > 0 ? stop.lowerSleeperPrice : ''}
                         onChange={(e) => updateStop(index, 'lowerSleeperPrice', parseNumberInput(e.target.value))}
-                        className="w-full px-3 py-2 border-2 border-purple-300 bg-purple-50 rounded-lg focus:ring-2 focus:ring-purple-500 font-semibold"
-                        placeholder="e.g., 700"
+                        className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-purple-500 font-semibold ${
+                          index === 0
+                            ? 'border-purple-200 bg-purple-50 text-gray-500 cursor-not-allowed'
+                            : 'border-purple-300 bg-purple-50'
+                        }`}
+                        placeholder={index === 0 ? 'Origin auto-set to ₹0' : 'e.g., 700'}
                         min="0"
                         step="0.01"
+                        disabled={index === 0}
                       />
                       <p className="text-xs text-gray-500 mt-1">Lower deck sleeper cumulative price</p>
                     </div>
@@ -502,27 +760,58 @@ const RouteManagement: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        value={stop.upperSleeperPrice === 0 ? '' : stop.upperSleeperPrice}
+                        value={index === 0 ? 0 : stop.upperSleeperPrice > 0 ? stop.upperSleeperPrice : ''}
                         onChange={(e) => updateStop(index, 'upperSleeperPrice', parseNumberInput(e.target.value))}
-                        className="w-full px-3 py-2 border-2 border-orange-300 bg-orange-50 rounded-lg focus:ring-2 focus:ring-orange-500 font-semibold"
-                        placeholder="e.g., 650"
+                        className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 font-semibold ${
+                          index === 0
+                            ? 'border-orange-200 bg-orange-50 text-gray-500 cursor-not-allowed'
+                            : 'border-orange-300 bg-orange-50'
+                        }`}
+                        placeholder={index === 0 ? 'Origin auto-set to ₹0' : 'e.g., 650'}
                         min="0"
                         step="0.01"
+                        disabled={index === 0}
                       />
                       <p className="text-xs text-gray-500 mt-1">Upper deck sleeper cumulative price</p>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
+            </div>
 
+            {/* Add Stop Button - After all stops */}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={addStop}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg flex items-center space-x-2 font-semibold"
+              >
+                <FaPlus className="text-lg" />
+                <span>Add Another Stop After {stops[stops.length - 1]?.city || 'Destination'}</span>
+              </button>
+            </div>
+
+            {/* Messages - Above Save Button */}
+            {error && (
+              <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg font-medium">
+                ⚠️ {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 rounded-lg font-medium">
+                ✅ {success}
+              </div>
+            )}
+
+            {/* Save Button */}
             <button
               onClick={handleSave}
               disabled={loading || !selectedBus}
-              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
             >
-              <FaSave />
-              <span>{loading ? 'Saving...' : 'Save Route & Pricing'}</span>
+              <FaSave className="text-xl" />
+              <span>{loading ? 'Saving Route...' : 'Save Complete Route & Pricing'}</span>
             </button>
           </div>
         )}

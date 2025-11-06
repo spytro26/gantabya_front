@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS, APP_NAME } from '../config';
 import busLogo from '../assets/buslogo.jpg';
+import { BusImageCarousel } from '../components/BusImageCarousel';
 import {
   FaMapMarkerAlt,
   FaClock,
@@ -181,7 +182,7 @@ export function SearchResults() {
               <img
                 src={busLogo}
                 alt="Logo"
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-16 h-16 rounded-full object-cover"
               />
               <span className="text-2xl font-bold text-indigo-900">
                 {APP_NAME}
@@ -373,6 +374,13 @@ export function SearchResults() {
                       className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                        {/* Bus Images - Show on left side */}
+                        {bus.images && bus.images.length > 0 && (
+                          <div className="lg:w-64 flex-shrink-0">
+                            <BusImageCarousel images={bus.images} busName={bus.busName} />
+                          </div>
+                        )}
+
                         {/* Bus Info */}
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-3">

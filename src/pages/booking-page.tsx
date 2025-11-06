@@ -27,6 +27,31 @@ interface Seat {
   isAvailable: boolean;
 }
 
+type StopPointType = 'BOARDING' | 'DROPPING';
+
+interface StopPointOption {
+  id: string;
+  name: string;
+  time: string;
+  type: StopPointType;
+  landmark?: string | null;
+  address?: string | null;
+  pointOrder: number;
+}
+
+interface RouteStop {
+  id: string;
+  name: string;
+  city: string;
+  state?: string | null;
+  stopIndex: number;
+  arrivalTime: string | null;
+  departureTime: string | null;
+  returnArrivalTime: string | null;
+  returnDepartureTime: string | null;
+  boardingPoints: StopPointOption[];
+}
+
 interface BusInfo {
   trip: {
     id: string;
@@ -57,6 +82,7 @@ interface BusInfo {
       lowerSeaterPrice: number;
       lowerSleeperPrice: number;
       upperSleeperPrice: number;
+      boardingPoints: StopPointOption[];
     };
     toStop: {
       id: string;
@@ -66,8 +92,13 @@ interface BusInfo {
       lowerSeaterPrice: number;
       lowerSleeperPrice: number;
       upperSleeperPrice: number;
+      boardingPoints: StopPointOption[];
     };
     fare: number;
+    isReturnTrip: boolean;
+    path: RouteStop[];
+    boardingPoints: StopPointOption[];
+    droppingPoints: StopPointOption[];
   };
   seats: {
     lowerDeck: Seat[];
@@ -98,6 +129,13 @@ export function BookingPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [fromStopId, setFromStopId] = useState(routeState?.fromStopId || '');
   const [toStopId, setToStopId] = useState(routeState?.toStopId || '');
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [modalStage, setModalStage] = useState<'BOARDING' | 'PASSENGER'>('BOARDING');
+  const [currentSeatStep, setCurrentSeatStep] = useState(0);
+  const [modalError, setModalError] = useState('');
+  const [selectedBoardingPointId, setSelectedBoardingPointId] = useState('');
+  const [selectedDroppingPointId, setSelectedDroppingPointId] = useState('');
+  const [isConfirmationReady, setIsConfirmationReady] = useState(false);
 
   useEffect(() => {
     if (!tripId) {
@@ -165,8 +203,34 @@ export function BookingPage() {
     }
   };
 
+  useEffect(() => {
+    if (!busInfo) {
+      return;
+    }
+
+    setSelectedBoardingPointId((prev) => {
+      if (prev) {
+        return prev;
+      }
+      const first = busInfo.route.boardingPoints?.[0]?.id;
+      return first || '';
+    });
+
+    setSelectedDroppingPointId((prev) => {
+      if (prev) {
+        return prev;
+      }
+      const first = busInfo.route.droppingPoints?.[0]?.id;
+      return first || '';
+    });
+  }, [busInfo]);
+
   const handleSeatClick = (seatId: string, isAvailable: boolean) => {
     if (!isAvailable) return;
+
+    setIsConfirmationReady(false);
+    setShowBookingModal(false);
+  setCurrentSeatStep(0);
 
     if (selectedSeats.includes(seatId)) {
       setSelectedSeats(selectedSeats.filter((id) => id !== seatId));
@@ -210,6 +274,11 @@ export function BookingPage() {
       return;
     }
 
+    if (!selectedBoardingPointId || !selectedDroppingPointId) {
+      alert('Please select your boarding and dropping points before confirming');
+      return;
+    }
+
     // Validate passenger information
     for (const seatId of selectedSeats) {
       const passenger = passengers[seatId];
@@ -235,6 +304,8 @@ export function BookingPage() {
         toStopId: toStopId || busInfo?.route.toStop.id,
         seatIds: selectedSeats,
         passengers: passengersArray,
+        boardingPointId: selectedBoardingPointId,
+        droppingPointId: selectedDroppingPointId,
         couponCode: appliedCoupon?.code || undefined,
       });
 
@@ -285,13 +356,170 @@ export function BookingPage() {
     return baseAmount;
   };
 
-  const getSelectedSeatsInfo = () => {
+  const getSelectedSeatsInfo = (): Seat[] => {
     if (!busInfo) return [];
     const allSeats = [...busInfo.seats.lowerDeck, ...busInfo.seats.upperDeck];
-    return selectedSeats.map((seatId) => {
-      const seat = allSeats.find((s) => s.id === seatId);
-      return seat;
-    }).filter(Boolean);
+    return selectedSeats
+      .map((seatId) => allSeats.find((s) => s.id === seatId))
+      .filter((seat): seat is Seat => Boolean(seat));
+  };
+
+  const handleOpenBookingModal = () => {
+    if (selectedSeats.length === 0 || !busInfo) {
+      return;
+    }
+
+    if (!selectedBoardingPointId && busInfo.route.boardingPoints?.length) {
+      setSelectedBoardingPointId(busInfo.route.boardingPoints[0].id);
+    }
+
+    if (!selectedDroppingPointId && busInfo.route.droppingPoints?.length) {
+      setSelectedDroppingPointId(busInfo.route.droppingPoints[0].id);
+    }
+
+    setModalStage('BOARDING');
+    setCurrentSeatStep(0);
+    setModalError('');
+    setShowBookingModal(true);
+    setIsConfirmationReady(false);
+  };
+
+  const handleCloseBookingModal = () => {
+    setShowBookingModal(false);
+    setModalStage('BOARDING');
+    setCurrentSeatStep(0);
+    setModalError('');
+  };
+
+  const handleBoardingNext = () => {
+    if (!selectedBoardingPointId || !selectedDroppingPointId) {
+      setModalError('Please select both boarding and dropping points to continue');
+      return;
+    }
+
+    setModalError('');
+    setModalStage('PASSENGER');
+    setCurrentSeatStep(0);
+  };
+
+  const handlePassengerNext = () => {
+    if (selectedSeats.length === 0) {
+      setModalError('Select at least one seat to continue');
+      return;
+    }
+
+    const seatId = selectedSeats[currentSeatStep];
+    const passenger = passengers[seatId];
+
+    if (!passenger || !passenger.name.trim()) {
+      setModalError('Passenger name is required');
+      return;
+    }
+
+    if (!passenger.age || passenger.age < 1) {
+      setModalError('Passenger age must be at least 1');
+      return;
+    }
+
+    setModalError('');
+
+    if (currentSeatStep < selectedSeats.length - 1) {
+      setCurrentSeatStep((prev) => prev + 1);
+    } else {
+      setShowBookingModal(false);
+      setIsConfirmationReady(true);
+    }
+  };
+
+  const handlePassengerBack = () => {
+    if (modalStage === 'BOARDING') {
+      handleCloseBookingModal();
+      return;
+    }
+
+    if (currentSeatStep === 0) {
+      setModalStage('BOARDING');
+      setModalError('');
+      return;
+    }
+
+    setModalError('');
+    setCurrentSeatStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const renderRoutePath = () => {
+    if (!busInfo || !busInfo.route.path || busInfo.route.path.length === 0) {
+      return null;
+    }
+
+    const path = busInfo.route.path;
+    const fromId = busInfo.route.fromStop.id;
+    const toId = busInfo.route.toStop.id;
+    const fromIndex = path.findIndex((stop) => stop.id === fromId);
+    const toIndex = path.findIndex((stop) => stop.id === toId);
+
+    if (fromIndex === -1 || toIndex === -1) {
+      return null;
+    }
+
+    const startIndex = Math.min(fromIndex, toIndex);
+    const endIndex = Math.max(fromIndex, toIndex);
+
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-sm text-gray-500">Journey Direction</div>
+            <div className="text-lg font-semibold text-gray-800">
+              {busInfo.route.isReturnTrip ? 'Return Trip' : 'Forward Trip'}
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            {busInfo.route.fromStop.city} → {busInfo.route.toStop.city}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <div className="flex items-center gap-4 min-w-max">
+            {path.map((stop, index) => {
+              const isActive = index >= startIndex && index <= endIndex;
+              const isEndpoint = stop.id === fromId || stop.id === toId;
+              const displayTime = busInfo.route.isReturnTrip
+                ? stop.returnDepartureTime || stop.returnArrivalTime || stop.departureTime || '--'
+                : stop.departureTime || stop.arrivalTime || '--';
+
+              return (
+                <div key={stop.id} className="flex items-center gap-4">
+                  <div
+                    className={`px-4 py-3 rounded-2xl border shadow-sm transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-indigo-600 text-white border-indigo-500'
+                        : 'bg-white text-gray-700 border-gray-200'
+                    } ${isEndpoint ? 'ring-2 ring-offset-2 ring-indigo-300' : ''}`}
+                  >
+                    <div className="text-sm font-semibold">
+                      {stop.city || stop.name}
+                    </div>
+                    <div className="text-xs opacity-80">{displayTime}</div>
+                  </div>
+                  {index < path.length - 1 && (
+                    <span
+                      className={`text-lg font-semibold ${
+                        index >= startIndex && index < endIndex
+                          ? 'text-indigo-500'
+                          : 'text-gray-300'
+                      }`}
+                    >
+                      →
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderSeatGrid = (seats: Seat[], deck: 'LOWER' | 'UPPER') => {
@@ -305,14 +533,30 @@ export function BookingPage() {
 
     if (!busInfo) return null;
 
-    const grid: (Seat | null)[][] = Array(busInfo.bus.gridRows)
+    // Calculate the actual grid size based on seats present
+    // Find the maximum row and column that contains a seat
+    let maxRow = 0;
+    let maxColumn = 0;
+    
+    seats.forEach((seat) => {
+      const seatMaxRow = seat.row + seat.rowSpan - 1;
+      const seatMaxColumn = seat.column + seat.columnSpan - 1;
+      if (seatMaxRow > maxRow) maxRow = seatMaxRow;
+      if (seatMaxColumn > maxColumn) maxColumn = seatMaxColumn;
+    });
+    
+    // Grid dimensions should be maxRow+1 and maxColumn+1 (0-indexed)
+    const actualRows = maxRow + 1;
+    const actualColumns = maxColumn + 1;
+
+    const grid: (Seat | null)[][] = Array(actualRows)
       .fill(null)
-      .map(() => Array(busInfo.bus.gridColumns).fill(null));
+      .map(() => Array(actualColumns).fill(null));
 
     seats.forEach((seat) => {
       for (let r = 0; r < seat.rowSpan; r++) {
         for (let c = 0; c < seat.columnSpan; c++) {
-          if (seat.row + r < busInfo.bus.gridRows && seat.column + c < busInfo.bus.gridColumns) {
+          if (seat.row + r < actualRows && seat.column + c < actualColumns) {
             if (r === 0 && c === 0) {
               grid[seat.row][seat.column] = seat;
             } else {
@@ -322,17 +566,6 @@ export function BookingPage() {
         }
       }
     });
-
-    const lastOccupiedRowIndex = (() => {
-      for (let i = grid.length - 1; i >= 0; i--) {
-        if (grid[i].some((cell) => cell !== null)) {
-          return i;
-        }
-      }
-      return -1;
-    })();
-
-    const trimmedGrid = lastOccupiedRowIndex >= 0 ? grid.slice(0, lastOccupiedRowIndex + 1) : grid;
 
     return (
       <div className="flex justify-center items-center w-full px-2">
@@ -359,7 +592,7 @@ export function BookingPage() {
 
               {/* Seat Grid - Rotated 90° (4 columns wide, up to 15 rows long) */}
               <div className="flex flex-col gap-1 sm:gap-2">
-                {trimmedGrid.map((row, rowIndex) => (
+                {grid.map((row, rowIndex) => (
                   <div key={rowIndex} className="flex gap-1 sm:gap-2 justify-center">
                     {row.map((cell, colIndex) => {
                       if (!cell) {
@@ -424,7 +657,7 @@ export function BookingPage() {
                                 ? 'bg-green-500 border-green-600 text-white scale-110'
                                 : isAvailable
                                 ? 'bg-white border-gray-300 hover:border-indigo-500 hover:bg-indigo-50'
-                                : 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
+                                : 'bg-red-400 border-red-500 text-white cursor-not-allowed'
                             }
                           `}
                         >
@@ -453,6 +686,19 @@ export function BookingPage() {
       </div>
     );
   };
+
+  const seatDetails = getSelectedSeatsInfo();
+  const selectedBoardingPoint = busInfo?.route.boardingPoints?.find(
+    (point) => point.id === selectedBoardingPointId
+  );
+  const selectedDroppingPoint = busInfo?.route.droppingPoints?.find(
+    (point) => point.id === selectedDroppingPointId
+  );
+  const currentSeatId = selectedSeats[currentSeatStep] || '';
+  const currentSeatDetails = seatDetails[currentSeatStep] || null;
+  const currentPassengerDetails = currentSeatId
+    ? passengers[currentSeatId]
+    : undefined;
 
   if (loading) {
     return (
@@ -491,7 +737,7 @@ export function BookingPage() {
               <img
                 src={busLogo}
                 alt="Logo"
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-16 h-16 rounded-full object-cover"
               />
               <span className="text-2xl font-bold text-indigo-900">
                 {APP_NAME}
@@ -626,7 +872,7 @@ export function BookingPage() {
                     <span>Selected</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-200 border-2 border-gray-300 rounded"></div>
+                    <div className="w-8 h-8 bg-red-400 border-2 border-red-500 rounded"></div>
                     <span>Booked</span>
                   </div>
                 </div>
@@ -663,162 +909,98 @@ export function BookingPage() {
                 <FaInfoCircle className="mt-0.5" />
                 <p>Click on available seats to select. You can select up to 6 seats.</p>
               </div>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-gray-600">
+                  {selectedSeats.length > 0
+                    ? `Selected seats: ${selectedSeats.length}`
+                    : 'Select seats to continue with booking.'}
+                </div>
+                <button
+                  onClick={handleOpenBookingModal}
+                  disabled={selectedSeats.length === 0}
+                  className={`px-6 py-2.5 rounded-lg font-semibold transition-colors ${
+                    selectedSeats.length === 0
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow'
+                  }`}
+                >
+                  {isConfirmationReady ? 'Edit Booking Details' : 'Continue Booking'}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Booking Summary */}
+          {/* Booking Side Panel */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-24">
-              <h3 className="text-xl font-bold mb-4">Booking Summary</h3>
+            {isConfirmationReady ? (
+              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900">Confirm Booking</h3>
+                  <span className="text-sm text-gray-500">{selectedSeats.length} seat{selectedSeats.length > 1 ? 's' : ''}</span>
+                </div>
 
-              {selectedSeats.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No seats selected
-                </p>
-              ) : (
-                <>
-                  <div className="mb-4">
-                    <div className="text-sm text-gray-600 mb-2">Selected Seats:</div>
-                    <div className="space-y-2">
-                      {getSelectedSeatsInfo().map((seat: any) => (
-                        <div
-                          key={seat.id}
-                          className="flex justify-between items-center px-3 py-2 bg-green-50 border border-green-200 rounded-lg"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-green-700">
-                              {seat.seatNumber}
-                            </span>
-                            <span className="text-xs text-gray-600">
-                              ({seat.level} {seat.type})
-                            </span>
-                          </div>
-                          <span className="font-semibold text-green-700">
-                            ₹{getSeatPrice(seat)}
-                          </span>
+                <div className="space-y-3">
+                  {seatDetails.map((seat) => (
+                    <div
+                      key={seat.id}
+                      className="flex justify-between items-center px-3 py-2 rounded-lg border border-indigo-100 bg-indigo-50"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold text-indigo-700">Seat {seat.seatNumber}</div>
+                        <div className="text-xs text-indigo-500">
+                          {seat.level} • {seat.type}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Passenger Information Form */}
-                  <div className="mb-4 border-t border-gray-200 pt-4">
-                    <div className="text-sm font-medium text-gray-700 mb-3">
-                      Passenger Details
-                    </div>
-                    <div className="space-y-4">
-                      {selectedSeats.map((seatId) => {
-                        const seat = getSelectedSeatsInfo().find((s: any) => s.id === seatId);
-                        return (
-                          <div key={seatId} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <div className="text-xs font-semibold text-indigo-600 mb-2">
-                              Seat {seat?.seatNumber}
-                            </div>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">
-                                  Name <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="Full Name"
-                                  value={passengers[seatId]?.name || ''}
-                                  onChange={(e) => {
-                                    setPassengers({
-                                      ...passengers,
-                                      [seatId]: {
-                                        name: e.target.value,
-                                        age: passengers[seatId]?.age || 0,
-                                        gender: passengers[seatId]?.gender || 'MALE',
-                                      },
-                                    });
-                                  }}
-                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Age <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    type="number"
-                                    placeholder="Age"
-                                    min="1"
-                                    max="120"
-                                    value={passengers[seatId]?.age || ''}
-                                    onChange={(e) => {
-                                      setPassengers({
-                                        ...passengers,
-                                        [seatId]: {
-                                          name: passengers[seatId]?.name || '',
-                                          age: parseInt(e.target.value) || 0,
-                                          gender: passengers[seatId]?.gender || 'MALE',
-                                        },
-                                      });
-                                    }}
-                                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Gender <span className="text-red-500">*</span>
-                                  </label>
-                                  <select
-                                    value={passengers[seatId]?.gender || 'MALE'}
-                                    onChange={(e) => {
-                                      setPassengers({
-                                        ...passengers,
-                                        [seatId]: {
-                                          name: passengers[seatId]?.name || '',
-                                          age: passengers[seatId]?.age || 0,
-                                          gender: e.target.value as 'MALE' | 'FEMALE' | 'OTHER',
-                                        },
-                                      });
-                                    }}
-                                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                  >
-                                    <option value="MALE">Male</option>
-                                    <option value="FEMALE">Female</option>
-                                    <option value="OTHER">Other</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-4 mb-4 space-y-2">
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>Subtotal ({selectedSeats.length} seats)</span>
-                      <span>₹{getSelectedSeatsInfo().reduce((sum: number, seat: any) => sum + getSeatPrice(seat), 0)}</span>
-                    </div>
-                    {appliedCoupon && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Discount ({appliedCoupon.code})</span>
-                        <span>
-                          -₹
-                          {(getSelectedSeatsInfo().reduce((sum: number, seat: any) => sum + getSeatPrice(seat), 0) - getTotalAmount()).toFixed(2)}
-                        </span>
                       </div>
+                      <span className="text-sm font-semibold text-indigo-700">₹{getSeatPrice(seat)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Boarding Point</div>
+                    <div className="text-sm font-semibold text-gray-800">
+                      {selectedBoardingPoint?.name || 'Not selected'}
+                    </div>
+                    {selectedBoardingPoint?.time && (
+                      <div className="text-xs text-gray-500">{selectedBoardingPoint.time}</div>
                     )}
                   </div>
-
-                  <div className="border-t border-gray-200 pt-4 mb-4">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total Amount</span>
-                      <span className="text-indigo-600">₹{getTotalAmount()}</span>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Dropping Point</div>
+                    <div className="text-sm font-semibold text-gray-800">
+                      {selectedDroppingPoint?.name || 'Not selected'}
                     </div>
+                    {selectedDroppingPoint?.time && (
+                      <div className="text-xs text-gray-500">{selectedDroppingPoint.time}</div>
+                    )}
                   </div>
+                </div>
 
-                  {/* Coupon Code */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Have a coupon?
-                    </label>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex justify-between font-medium">
+                    <span>Subtotal</span>
+                    <span>₹{seatDetails.reduce((total, seat) => total + getSeatPrice(seat), 0)}</span>
+                  </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({appliedCoupon.code})</span>
+                      <span>
+                        -₹
+                        {(seatDetails.reduce((total, seat) => total + getSeatPrice(seat), 0) - getTotalAmount()).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
+                    <span>Total</span>
+                    <span className="text-indigo-600">₹{getTotalAmount()}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Have a coupon?</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -838,17 +1020,287 @@ export function BookingPage() {
 
                   <button
                     onClick={handleConfirmBooking}
-                    disabled={bookingLoading}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
+                    disabled={bookingLoading || selectedSeats.length === 0}
+                    className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                      bookingLoading
+                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow'
+                    }`}
                   >
                     {bookingLoading ? 'Processing...' : 'Confirm Booking'}
                   </button>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Bus Photos</h3>
+                  <div className="rounded-xl overflow-hidden">
+                    <BusImageCarousel
+                      images={busInfo.bus.images || []}
+                      busName={busInfo.bus.name}
+                      heightClass="h-64 sm:h-72"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Route Overview</h3>
+                  {renderRoutePath() || (
+                    <div className="text-sm text-gray-500">Route details unavailable.</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {showBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4 py-6">
+          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <button
+              onClick={handleCloseBookingModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+              aria-label="Close booking modal"
+            >
+              ×
+            </button>
+
+            <div className="p-6 sm:p-8 space-y-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`flex items-center gap-3 ${
+                    modalStage === 'BOARDING' ? 'text-indigo-600' : 'text-gray-400'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      modalStage === 'BOARDING' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    1
+                  </div>
+                  <span className="text-sm font-semibold">Boarding & Dropping</span>
+                </div>
+                <span className="text-lg text-gray-300">→</span>
+                <div
+                  className={`flex items-center gap-3 ${
+                    modalStage === 'PASSENGER' ? 'text-indigo-600' : 'text-gray-400'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      modalStage === 'PASSENGER' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    2
+                  </div>
+                  <span className="text-sm font-semibold">Passenger Details</span>
+                </div>
+              </div>
+
+              {modalStage === 'BOARDING' ? (
+                <div className="space-y-6">
+                  <div className="text-lg font-semibold text-gray-900">
+                    Choose your boarding and dropping points
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-3">Boarding Point</div>
+                      <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                        {busInfo?.route.boardingPoints?.length ? (
+                          busInfo.route.boardingPoints.map((point) => (
+                            <label
+                              key={point.id}
+                              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                                selectedBoardingPointId === point.id
+                                  ? 'border-indigo-500 bg-indigo-50'
+                                  : 'border-gray-200 hover:border-indigo-200'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="boardingPoint"
+                                value={point.id}
+                                checked={selectedBoardingPointId === point.id}
+                                onChange={() => setSelectedBoardingPointId(point.id)}
+                                className="mt-1"
+                              />
+                              <div>
+                                <div className="text-sm font-semibold text-gray-800">{point.name}</div>
+                                <div className="text-xs text-gray-500">{point.time}</div>
+                                {point.landmark && (
+                                  <div className="text-xs text-gray-400 mt-1">{point.landmark}</div>
+                                )}
+                              </div>
+                            </label>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500">No boarding points available.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-3">Dropping Point</div>
+                      <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                        {busInfo?.route.droppingPoints?.length ? (
+                          busInfo.route.droppingPoints.map((point) => (
+                            <label
+                              key={point.id}
+                              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                                selectedDroppingPointId === point.id
+                                  ? 'border-indigo-500 bg-indigo-50'
+                                  : 'border-gray-200 hover:border-indigo-200'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="droppingPoint"
+                                value={point.id}
+                                checked={selectedDroppingPointId === point.id}
+                                onChange={() => setSelectedDroppingPointId(point.id)}
+                                className="mt-1"
+                              />
+                              <div>
+                                <div className="text-sm font-semibold text-gray-800">{point.name}</div>
+                                <div className="text-xs text-gray-500">{point.time}</div>
+                                {point.landmark && (
+                                  <div className="text-xs text-gray-400 mt-1">{point.landmark}</div>
+                                )}
+                              </div>
+                            </label>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500">No dropping points available.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm text-gray-500">Seat</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {currentSeatDetails ? currentSeatDetails.seatNumber : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Seat {currentSeatStep + 1} of {selectedSeats.length}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Passenger Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={currentPassengerDetails?.name || ''}
+                        onChange={(e) => {
+                          if (!currentSeatId) return;
+                          const value = e.target.value;
+                          setPassengers((prev) => ({
+                            ...prev,
+                            [currentSeatId]: {
+                              name: value,
+                              age: prev[currentSeatId]?.age || 0,
+                              gender: prev[currentSeatId]?.gender || 'MALE',
+                            },
+                          }));
+                        }}
+                        placeholder="Full name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Age <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={currentPassengerDetails?.age || ''}
+                          onChange={(e) => {
+                            if (!currentSeatId) return;
+                            const value = parseInt(e.target.value, 10) || 0;
+                            setPassengers((prev) => ({
+                              ...prev,
+                              [currentSeatId]: {
+                                name: prev[currentSeatId]?.name || '',
+                                age: value,
+                                gender: prev[currentSeatId]?.gender || 'MALE',
+                              },
+                            }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                          placeholder="Age"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Gender
+                        </label>
+                        <select
+                          value={currentPassengerDetails?.gender || 'MALE'}
+                          onChange={(e) => {
+                            if (!currentSeatId) return;
+                            const value = e.target.value as 'MALE' | 'FEMALE' | 'OTHER';
+                            setPassengers((prev) => ({
+                              ...prev,
+                              [currentSeatId]: {
+                                name: prev[currentSeatId]?.name || '',
+                                age: prev[currentSeatId]?.age || 0,
+                                gender: value,
+                              },
+                            }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {modalError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+                  {modalError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <button
+                  onClick={handlePassengerBack}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 font-medium"
+                >
+                  {modalStage === 'BOARDING' ? 'Cancel' : 'Back'}
+                </button>
+                <button
+                  onClick={modalStage === 'BOARDING' ? handleBoardingNext : handlePassengerNext}
+                  className="px-5 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow"
+                >
+                  {modalStage === 'BOARDING'
+                    ? 'Next'
+                    : currentSeatStep === selectedSeats.length - 1
+                    ? 'Finish'
+                    : 'Save & Next'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

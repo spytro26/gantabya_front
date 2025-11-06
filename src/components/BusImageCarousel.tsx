@@ -10,17 +10,21 @@ interface BusImage {
 interface BusImageCarouselProps {
   images: BusImage[];
   busName?: string;
+  heightClass?: string;
 }
 
-export function BusImageCarousel({ images, busName }: BusImageCarouselProps) {
+export function BusImageCarousel({ images, busName, heightClass }: BusImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const containerHeightClass = heightClass || 'h-48';
 
   if (!images || images.length === 0) {
     // Show placeholder if no images
     return (
-      <div className="relative w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+      <div
+        className={`relative w-full ${containerHeightClass} bg-gray-200 rounded-lg flex items-center justify-center`}
+      >
         <div className="text-center text-gray-400">
           <FaImage className="text-4xl mx-auto mb-2" />
           <p className="text-sm">No images available</p>
@@ -50,9 +54,9 @@ export function BusImageCarousel({ images, busName }: BusImageCarouselProps) {
   };
 
   return (
-    <div className="relative w-full h-48 group">
+    <div className={`relative w-full ${containerHeightClass} group`}>
       {/* Main Image */}
-      <div className="relative w-full h-full overflow-hidden rounded-lg bg-white">
+      <div className="relative w-full h-full overflow-hidden rounded-lg bg-gray-100">
         {imageError ? (
           <div className="w-full h-full flex items-center justify-center bg-gray-200">
             <div className="text-center text-gray-400">
@@ -63,18 +67,17 @@ export function BusImageCarousel({ images, busName }: BusImageCarouselProps) {
         ) : (
           <>
             {!loadedImages.has(currentIndex) && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                 <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-yellow-500"></div>
               </div>
             )}
             <img
               src={images[currentIndex].imageUrl}
               alt={`${busName || 'Bus'} - Image ${currentIndex + 1}`}
-              className="w-full h-full object-contain bg-white"
+              className="w-full h-full object-cover"
               onLoad={handleImageLoad}
               onError={handleImageError}
-              loading="eager"
-              style={{ display: 'block', backgroundColor: 'white' }}
+              crossOrigin="anonymous"
             />
           </>
         )}

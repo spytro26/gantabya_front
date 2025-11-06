@@ -280,7 +280,8 @@ const AdminBusImages: React.FC = () => {
                         <img
                           src={url}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="block w-full h-full object-cover"
+                          loading="lazy"
                           onError={() => {
                             console.error('Failed to load preview:', url);
                           }}
@@ -342,46 +343,33 @@ const AdminBusImages: React.FC = () => {
               {images.map((image) => (
                 <div
                   key={image.id}
-                  className="relative group rounded-lg overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition shadow-sm"
-                  style={{ backgroundColor: 'white' }}
+                  className="relative group rounded-lg overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition"
                 >
-                  <div className="aspect-video flex items-center justify-center" style={{ backgroundColor: '#f5f5f5' }}>
+                  <div className="aspect-video bg-gray-100">
                     <img
                       src={image.imageUrl}
                       alt="Bus"
-                      className="max-w-full max-h-full object-contain"
-                      loading="eager"
-                      style={{ 
-                        display: 'block',
-                        width: 'auto',
-                        height: 'auto',
-                        maxWidth: '100%',
-                        maxHeight: '100%'
-                      }}
-                      onLoad={() => {
-                        console.log('✅ Image loaded:', image.imageUrl);
-                      }}
+                      className="block w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
-                        console.error('❌ Failed to load image:', image.imageUrl);
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                        const parent = img.parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #999;"><svg style="width: 4rem; height: 4rem; margin-bottom: 0.75rem;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg><span style="font-size: 0.875rem; font-weight: 500;">Failed to Load</span></div>';
-                        }
+                        console.error('Failed to load image:', image.imageUrl);
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="%239ca3af"%3EImage Load Error%3C/text%3E%3C/svg%3E';
                       }}
                     />
                   </div>
 
                   {/* Delete Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center pointer-events-none">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center pointer-events-none">
                     <button
                       onClick={() => handleDelete(image.id)}
-                      className={`pointer-events-auto opacity-0 group-hover:opacity-100 transition px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      className={`opacity-0 group-hover:opacity-100 transition px-4 py-2 rounded-lg flex items-center space-x-2 ${
                         deleteConfirm === image.id
                           ? 'bg-red-600 text-white'
                           : 'bg-white text-red-600 hover:bg-red-50'
                       }`}
+                      style={{ pointerEvents: 'auto' }}
                     >
                       <FaTrash />
                       <span>

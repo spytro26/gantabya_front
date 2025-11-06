@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
   // Admin Auth
   ADMIN_SIGNUP: "/admin/signup",
   ADMIN_SIGNIN: "/admin/signin",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_SERVICE_NAME: "/admin/profile/service-name",
 
   // Admin Bus Management
   ADMIN_CREATE_BUS: "/admin/createbus",

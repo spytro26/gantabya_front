@@ -9,6 +9,7 @@ const AdminSignup: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
+    busServiceName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -31,8 +32,13 @@ const AdminSignup: React.FC = () => {
     setSuccess('');
 
     // Validate form
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword || !formData.busServiceName) {
       setError('All fields are required');
+      return;
+    }
+
+    if (formData.busServiceName.trim().length < 3) {
+      setError('Bus service name must be at least 3 characters');
       return;
     }
 
@@ -53,6 +59,7 @@ const AdminSignup: React.FC = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        busServiceName: formData.busServiceName.trim() || 'Ankush Travels',
       });
 
       setSuccess(response.data.message);
@@ -122,6 +129,27 @@ const AdminSignup: React.FC = () => {
                   onChange={handleChange}
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-slate-600 bg-slate-700 rounded-lg placeholder-gray-500 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition"
                   placeholder="Enter your full name"
+                />
+              </div>
+            </div>
+
+            {/* Service Name Field */}
+            <div>
+              <label htmlFor="busServiceName" className="block text-sm font-medium text-gray-300 mb-2">
+                Bus Service Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaUser className="text-gray-500" />
+                </div>
+                <input
+                  id="busServiceName"
+                  name="busServiceName"
+                  type="text"
+                  value={formData.busServiceName}
+                  onChange={handleChange}
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-slate-600 bg-slate-700 rounded-lg placeholder-gray-500 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition"
+                  placeholder="e.g., Ankush Travels"
                 />
               </div>
             </div>
