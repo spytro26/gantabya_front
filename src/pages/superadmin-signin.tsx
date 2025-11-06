@@ -35,17 +35,17 @@ export default function SuperAdminSignin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4 py-8">
+      <div className="max-w-md w-full space-y-6">
         {/* Shield Icon Badge */}
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-center sm:justify-end">
           <div className="bg-red-600 p-3 rounded-full shadow-lg">
             <FaShieldAlt className="text-white text-2xl" />
           </div>
         </div>
 
         {/* Signin Card */}
-        <div className="bg-gray-800 rounded-lg shadow-2xl p-8 border border-gray-700">
+        <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 border border-gray-700">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Super Admin</h1>
             <p className="text-gray-400">Sign in to access super admin panel</p>
@@ -115,16 +115,10 @@ export default function SuperAdminSignin() {
             </button>
           </form>
 
-          {/* Note */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-500 text-xs">
-              Default credentials: username=<span className="text-red-400">super</span>, password=<span className="text-red-400">admin</span>
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center">
+        <div className="text-center">
           <p className="text-gray-600 text-sm">
             Highest level of access • Full system control
           </p>

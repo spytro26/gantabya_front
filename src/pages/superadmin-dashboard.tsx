@@ -11,6 +11,7 @@ import {
   FaUserCheck,
   FaUserClock,
   FaEye,
+  FaTags,
 } from "react-icons/fa";
 
 const API_BASE_URL = "http://localhost:3000";
@@ -119,8 +120,8 @@ export default function SuperAdminDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center space-x-3">
               <div className="bg-red-600 p-2 rounded-lg">
                 <FaShieldAlt className="text-white text-2xl" />
@@ -130,13 +131,22 @@ export default function SuperAdminDashboard() {
                 <p className="text-gray-400 text-sm">Manage admin verifications</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              <FaSignOutAlt />
-              <span>Logout</span>
-            </button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+              <Link
+                to="/superadmin/offers"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg font-semibold transition-colors"
+              >
+                <FaTags />
+                <span>Manage Offers</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                <FaSignOutAlt />
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -194,7 +204,7 @@ export default function SuperAdminDashboard() {
                   key={admin.id}
                   className="bg-gray-800 rounded-lg p-6 border border-yellow-600 hover:border-yellow-500 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="text-lg font-semibold text-white">{admin.name}</h3>
@@ -212,10 +222,10 @@ export default function SuperAdminDashboard() {
                         Registered: {new Date(admin.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col gap-2 sm:flex-row md:items-center">
                       <Link
                         to={`/superadmin/admin/${admin.id}`}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                       >
                         <FaEye />
                         <span>View Profile</span>
@@ -223,7 +233,7 @@ export default function SuperAdminDashboard() {
                       <button
                         onClick={() => handleVerifyAdmin(admin.id)}
                         disabled={actionLoading === admin.id}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                        className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {actionLoading === admin.id ? (
                           <>
@@ -258,7 +268,7 @@ export default function SuperAdminDashboard() {
                   key={admin.id}
                   className="bg-gray-800 rounded-lg p-6 border border-green-600 hover:border-green-500 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="text-lg font-semibold text-white">{admin.name}</h3>
@@ -275,10 +285,10 @@ export default function SuperAdminDashboard() {
                         )}
                       </div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col gap-2 sm:flex-row md:items-center">
                       <Link
                         to={`/superadmin/admin/${admin.id}`}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                       >
                         <FaEye />
                         <span>View Profile</span>
@@ -286,7 +296,7 @@ export default function SuperAdminDashboard() {
                       <button
                         onClick={() => handleRevokeAdmin(admin.id)}
                         disabled={actionLoading === admin.id}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                        className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {actionLoading === admin.id ? (
                           <>

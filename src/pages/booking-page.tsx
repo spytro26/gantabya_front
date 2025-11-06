@@ -1,111 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import {
+  useState,
+  useEffect,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
-import { API_ENDPOINTS, APP_NAME } from '../config';
-import busLogo from '../assets/buslogo.jpg';
+import { API_ENDPOINTS } from '../config';
+import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
 import {
   FaArrowLeft,
-  FaUser,
-  FaBell,
-  FaTicketAlt,
   FaInfoCircle,
   FaBed,
   FaChair,
+  FaChevronUp,
+  FaChevronDown,
 } from 'react-icons/fa';
 import { GiSteeringWheel } from 'react-icons/gi';
-
-interface Seat {
-  id: string;
-  seatNumber: string;
-  row: number;
-  column: number;
-  rowSpan: number;
-  columnSpan: number;
-  type: 'SEATER' | 'SLEEPER';
-  level: 'LOWER' | 'UPPER';
-  isAvailable: boolean;
-}
-
-type StopPointType = 'BOARDING' | 'DROPPING';
-
-interface StopPointOption {
-  id: string;
-  name: string;
-  time: string;
-  type: StopPointType;
-  landmark?: string | null;
-  address?: string | null;
-  pointOrder: number;
-}
-
-interface RouteStop {
-  id: string;
-  name: string;
-  city: string;
-  state?: string | null;
-  stopIndex: number;
-  arrivalTime: string | null;
-  departureTime: string | null;
-  returnArrivalTime: string | null;
-  returnDepartureTime: string | null;
-  boardingPoints: StopPointOption[];
-}
-
-interface BusInfo {
-  trip: {
-    id: string;
-    tripDate: string;
-    status: string;
-  };
-  bus: {
-    id: string;
-    busNumber: string;
-    name: string;
-    type: string;
-    layoutType: string;
-    totalSeats: number;
-    gridRows: number;
-    gridColumns: number;
-    images?: Array<{
-      id: string;
-      imageUrl: string;
-      createdAt: string;
-    }>;
-  };
-  route: {
-    fromStop: {
-      id: string;
-      name: string;
-      city: string;
-      departureTime: string | null;
-      lowerSeaterPrice: number;
-      lowerSleeperPrice: number;
-      upperSleeperPrice: number;
-      boardingPoints: StopPointOption[];
-    };
-    toStop: {
-      id: string;
-      name: string;
-      city: string;
-      arrivalTime: string | null;
-      lowerSeaterPrice: number;
-      lowerSleeperPrice: number;
-      upperSleeperPrice: number;
-      boardingPoints: StopPointOption[];
-    };
-    fare: number;
-    isReturnTrip: boolean;
-    path: RouteStop[];
-    boardingPoints: StopPointOption[];
-    droppingPoints: StopPointOption[];
-  };
-  seats: {
-    lowerDeck: Seat[];
-    upperDeck: Seat[];
-    availableCount: number;
-  };
-}
+import type { BusInfo, Seat } from '../types/booking';
 
 export function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -115,6 +27,9 @@ export function BookingPage() {
     searchParams?: any;
     fromStopId?: string;
     toStopId?: string;
+    selectedSeats?: string[];
+    boardingPointId?: string;
+    droppingPointId?: string;
   };
 
   const [busInfo, setBusInfo] = useState<BusInfo | null>(null);
@@ -133,9 +48,21 @@ export function BookingPage() {
   const [modalStage, setModalStage] = useState<'BOARDING' | 'PASSENGER'>('BOARDING');
   const [currentSeatStep, setCurrentSeatStep] = useState(0);
   const [modalError, setModalError] = useState('');
-  const [selectedBoardingPointId, setSelectedBoardingPointId] = useState('');
-  const [selectedDroppingPointId, setSelectedDroppingPointId] = useState('');
+  const [selectedBoardingPointId, setSelectedBoardingPointId] = useState(
+    routeState?.boardingPointId || ''
+  );
+  const [selectedDroppingPointId, setSelectedDroppingPointId] = useState(
+    routeState?.droppingPointId || ''
+  );
   const [isConfirmationReady, setIsConfirmationReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.innerWidth < 768;
+  });
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
 
   useEffect(() => {
     if (!tripId) {
@@ -152,6 +79,29 @@ export function BookingPage() {
       fetchTripStops();
     }
   }, [tripId]);
+    useEffect(() => {
+      const checkViewport = () => {
+        if (typeof window === 'undefined') return;
+        setIsMobile(window.innerWidth < 768);
+      };
+
+      checkViewport();
+      window.addEventListener('resize', checkViewport);
+      return () => window.removeEventListener('resize', checkViewport);
+    }, []);
+
+    useEffect(() => {
+      if (!isMobile) {
+        setIsSheetExpanded(false);
+      }
+    }, [isMobile]);
+
+    useEffect(() => {
+      if (selectedSeats.length === 0) {
+        setIsSheetExpanded(false);
+      }
+    }, [selectedSeats.length]);
+
 
   const fetchUnreadCount = async () => {
     try {
@@ -224,6 +174,24 @@ export function BookingPage() {
       return first || '';
     });
   }, [busInfo]);
+
+  useEffect(() => {
+    if (
+      routeState?.selectedSeats &&
+      Array.isArray(routeState.selectedSeats) &&
+      routeState.selectedSeats.length > 0 &&
+      selectedSeats.length === 0
+    ) {
+      setSelectedSeats(routeState.selectedSeats);
+      const restoredPassengers: {
+        [seatId: string]: { name: string; age: number; gender: string };
+      } = {};
+      routeState.selectedSeats.forEach((seatId) => {
+        restoredPassengers[seatId] = { name: '', age: 0, gender: 'MALE' };
+      });
+      setPassengers(restoredPassengers);
+    }
+  }, [routeState?.selectedSeats, selectedSeats.length]);
 
   const handleSeatClick = (seatId: string, isAvailable: boolean) => {
     if (!isAvailable) return;
@@ -379,6 +347,69 @@ export function BookingPage() {
     return selectedSeats
       .map((seatId) => allSeats.find((s) => s.id === seatId))
       .filter((seat): seat is Seat => Boolean(seat));
+  };
+
+  const getMinimumSeatPrice = () => {
+    if (!busInfo) return 0;
+    const prices = [
+      Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice),
+      Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice),
+      Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice),
+    ].filter((price) => price > 0);
+
+    if (prices.length === 0) {
+      return 0;
+    }
+
+    return Math.min(...prices);
+  };
+
+  const bottomSheetPeekHeight = selectedSeats.length > 0 ? 220 : 160;
+  const mobileContentPaddingBottom = bottomSheetPeekHeight + (selectedSeats.length > 0 ? 120 : 80);
+  const bottomSheetTransform = isSheetExpanded
+    ? 'translateY(0)'
+    : `translateY(calc(100% - ${bottomSheetPeekHeight}px))`;
+
+  const handleSheetToggle = () => {
+    setIsSheetExpanded((prev) => !prev);
+  };
+
+  const handleSheetTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    setTouchStartY(event.touches[0]?.clientY ?? null);
+  };
+
+  const handleSheetTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (touchStartY === null) return;
+    const endY = event.changedTouches[0]?.clientY ?? touchStartY;
+    const delta = endY - touchStartY;
+
+    if (delta < -40) {
+      setIsSheetExpanded(true);
+    } else if (delta > 40) {
+      setIsSheetExpanded(false);
+    }
+
+    setTouchStartY(null);
+  };
+
+  const handleProceedOrder = () => {
+    if (!tripId || selectedSeats.length === 0) {
+      return;
+    }
+
+    const effectiveFromStopId = fromStopId || busInfo?.route.fromStop.id || '';
+    const effectiveToStopId = toStopId || busInfo?.route.toStop.id || '';
+
+    navigate(`/book/${tripId}/boarding`, {
+      state: {
+        selectedSeats,
+        fromStopId: effectiveFromStopId,
+        toStopId: effectiveToStopId,
+        searchParams: routeState?.searchParams || null,
+        boardingPointId: routeState?.boardingPointId || selectedBoardingPointId || '',
+        droppingPointId: routeState?.droppingPointId || selectedDroppingPointId || '',
+      },
+    });
   };
 
   const handleOpenBookingModal = () => {
@@ -701,104 +732,267 @@ export function BookingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header/Navbar */}
-      <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <img
-                src={busLogo}
-                alt="Logo"
-                className="w-16 h-16 rounded-full object-cover"
-              />
-              <span className="text-2xl font-bold text-indigo-900">
-                {APP_NAME}
-              </span>
-            </div>
-            <div className="flex items-center space-x-6">
-              <Link
-                to="/home"
-                className="text-gray-700 hover:text-indigo-600 font-medium"
-              >
-                Home
-              </Link>
-              <Link
-                to="/my-bookings"
-                className="text-gray-700 hover:text-indigo-600 font-medium flex items-center gap-2"
-              >
-                <FaTicketAlt />
-                My Bookings
-              </Link>
-              <Link
-                to="/notifications"
-                className="relative text-gray-700 hover:text-indigo-600"
-              >
-                <FaBell className="text-xl" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-              >
-                <FaUser />
-                Profile
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <UserNavbar unreadCount={unreadCount} currentPage="booking" />
 
-      {/* Trip Info Bar */}
-      <div className="bg-indigo-600 text-white py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  {/* Trip Info Bar */}
+  <div className="hidden md:block bg-indigo-600 text-white py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-indigo-100 hover:text-white mb-3"
+            className="flex items-center gap-2 text-xs sm:text-sm text-indigo-100 hover:text-white mb-2 sm:mb-3"
           >
             <FaArrowLeft />
             Back to Results
           </button>
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <h2 className="text-2xl font-bold">{busInfo.bus.name}</h2>
-              <p className="text-indigo-100">{busInfo.bus.busNumber} • {busInfo.bus.type}</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">{busInfo.bus.name}</h2>
+              <p className="text-xs sm:text-sm text-indigo-100">{busInfo.bus.busNumber} • {busInfo.bus.type}</p>
             </div>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-6">
                 <div>
-                  <div className="text-sm text-indigo-100">From</div>
-                  <div className="font-semibold">{busInfo.route.fromStop.city}</div>
+                  <div className="text-xs text-indigo-100">From</div>
+                  <div className="text-sm sm:text-base font-semibold">{busInfo.route.fromStop.city}</div>
                 </div>
-                <div>→</div>
+                <div className="text-sm sm:text-base">→</div>
                 <div>
-                  <div className="text-sm text-indigo-100">To</div>
-                  <div className="font-semibold">{busInfo.route.toStop.city}</div>
+                  <div className="text-xs text-indigo-100">To</div>
+                  <div className="text-sm sm:text-base font-semibold">{busInfo.route.toStop.city}</div>
                 </div>
               </div>
-              <div className="text-sm text-indigo-100">
-                Prices vary by seat type and level
+              <div className="text-xs sm:text-sm text-indigo-100">
+                Prices vary by seat type
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Seat Selection */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Mobile Seat Experience */}
+  <div className="md:hidden relative">
+        <div
+          className="px-3 pt-4"
+          style={{ paddingBottom: mobileContentPaddingBottom }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-indigo-600 shadow-sm"
+            >
+              <FaArrowLeft className="text-sm" />
+              Back
+            </button>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-gray-900">{busInfo.bus.name}</div>
+              <div className="text-[11px] text-gray-500">{busInfo.bus.busNumber} • {busInfo.bus.type}</div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-4 shadow-xl">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentDeck('LOWER')}
+                className={`w-full rounded-2xl px-4 py-2 text-sm font-semibold transition-colors ${
+                  currentDeck === 'LOWER'
+                    ? 'bg-indigo-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Lower Deck
+              </button>
+              {busInfo.seats.upperDeck.length > 0 && (
+                <button
+                  onClick={() => setCurrentDeck('UPPER')}
+                  className={`w-full rounded-2xl px-4 py-2 text-sm font-semibold transition-colors ${
+                    currentDeck === 'UPPER'
+                      ? 'bg-indigo-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Upper Deck
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-gray-50 p-2 shadow-inner">
+              {renderSeatGrid(
+                currentDeck === 'LOWER'
+                  ? busInfo.seats.lowerDeck
+                  : busInfo.seats.upperDeck,
+                currentDeck
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between text-[11px] text-gray-500">
+              <span>Tap seats to select • Max 6 seats</span>
+              <span className="font-semibold text-indigo-600">
+                {selectedSeats.length > 0
+                  ? `Selected: ${selectedSeats.length}`
+                  : 'No seats yet'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Info Bottom Sheet */}
+      {isMobile && (
+        <div
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 transition-transform duration-300 ease-out"
+          style={{ transform: bottomSheetTransform }}
+        >
+          <div className="rounded-t-3xl bg-white px-5 pt-4 pb-6 shadow-[0_-20px_60px_rgba(15,23,42,0.25)]">
+            <div
+              className="flex justify-center"
+              onTouchStart={handleSheetTouchStart}
+              onTouchEnd={handleSheetTouchEnd}
+            >
+              <button
+                type="button"
+                onClick={handleSheetToggle}
+                className="h-1.5 w-12 rounded-full bg-gray-300"
+                aria-label={isSheetExpanded ? 'Collapse bus details' : 'Expand bus details'}
+              ></button>
+            </div>
+
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-gray-400">Route</div>
+                <div className="text-base font-semibold text-gray-900">
+                  {busInfo.route.fromStop.city} → {busInfo.route.toStop.city}
+                </div>
+                <div className="text-[11px] text-gray-500">
+                  {(busInfo.route.fromStop.departureTime || '--')} • {(busInfo.route.toStop.arrivalTime || '--')}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleSheetToggle}
+                className="rounded-full border border-gray-200 p-2 text-gray-600 shadow-sm"
+                aria-label={isSheetExpanded ? 'Collapse bus details' : 'Expand bus details'}
+              >
+                {isSheetExpanded ? <FaChevronDown /> : <FaChevronUp />}
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] text-gray-500">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-gray-400">Bus</div>
+                <div className="text-sm font-semibold text-gray-900">{busInfo.bus.name}</div>
+                <div>{busInfo.bus.busNumber}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[11px] uppercase tracking-wide text-gray-400">{selectedSeats.length > 0 ? 'Your total' : 'Starts at'}</div>
+                <div className="text-lg font-bold text-indigo-600">
+                  ₹{selectedSeats.length > 0 ? getTotalAmount() : getMinimumSeatPrice()}
+                </div>
+                {selectedSeats.length > 0 && (
+                  <div className="text-[10px] text-gray-400">
+                    {selectedSeats.length} seat{selectedSeats.length > 1 ? 's' : ''} selected
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedSeats.length > 0 && (
+              <div className="mt-4">
+                <button
+                  onClick={handleProceedOrder}
+                  className="w-full rounded-2xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200"
+                >
+                  Proceed Order
+                </button>
+              </div>
+            )}
+
+            {!isSheetExpanded && (
+              <p className="mt-3 text-center text-[11px] text-gray-400">
+                Swipe up to view bus photos, pricing, and route details.
+              </p>
+            )}
+
+            <div
+              className="mt-4 transition-all duration-300"
+              style={{
+                maxHeight: isSheetExpanded ? '60vh' : '0px',
+                opacity: isSheetExpanded ? 1 : 0,
+                overflowY: isSheetExpanded ? 'auto' : 'hidden',
+              }}
+            >
+              <div className="space-y-4 pr-1 pb-2">
+                {busInfo.bus.images && busInfo.bus.images.length > 0 && (
+                  <div className="overflow-hidden rounded-2xl">
+                    <BusImageCarousel
+                      images={busInfo.bus.images}
+                      busName={busInfo.bus.name}
+                      heightClass="h-44"
+                    />
+                  </div>
+                )}
+
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/80 p-4 text-xs">
+                  <div className="text-indigo-900 text-sm font-semibold mb-3">Seat Pricing</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Seater</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Sleeper</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-indigo-500">Upper Sleeper</span>
+                      <span className="text-sm font-bold text-indigo-700">₹{Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 text-xs text-gray-600">
+                  <div className="text-sm font-semibold text-gray-900 mb-3">Seat Legend</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded border-2 border-gray-300 bg-white"></div>
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded border-2 border-green-600 bg-green-500"></div>
+                      <span>Selected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded border-2 border-red-500 bg-red-400"></div>
+                      <span>Booked</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 text-xs text-gray-600">
+                  <div className="text-sm font-semibold text-gray-900 mb-3">Route Overview</div>
+                  {renderRoutePath() || (
+                    <div className="text-[11px] text-gray-400">Route details unavailable.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+  <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Seat Selection */}
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Seat Selection Grid */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-bold mb-4">Select Your Seats</h3>
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Select Your Seats</h3>
 
               {/* Deck Tabs */}
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-2 mb-4 sm:mb-6">
                 <button
                   onClick={() => setCurrentDeck('LOWER')}
-                  className={`px-6 py-2 rounded-lg font-semibold ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base font-semibold ${
                     currentDeck === 'LOWER'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-200 text-gray-700'
@@ -809,7 +1003,7 @@ export function BookingPage() {
                 {busInfo.seats.upperDeck.length > 0 && (
                   <button
                     onClick={() => setCurrentDeck('UPPER')}
-                    className={`px-6 py-2 rounded-lg font-semibold ${
+                    className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base font-semibold ${
                       currentDeck === 'UPPER'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-gray-200 text-gray-700'
@@ -821,37 +1015,37 @@ export function BookingPage() {
               </div>
 
               {/* Legend */}
-              <div className="mb-6 space-y-4">
-                <div className="flex gap-6 text-sm">
+              <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+                <div className="flex flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-white border-2 border-gray-300 rounded"></div>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white border-2 border-gray-300 rounded"></div>
                     <span>Available</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-green-500 border-2 border-green-600 rounded"></div>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-500 border-2 border-green-600 rounded"></div>
                     <span>Selected</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-red-400 border-2 border-red-500 rounded"></div>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-400 border-2 border-red-500 rounded"></div>
                     <span>Booked</span>
                   </div>
                 </div>
                 
                 {/* Pricing Information */}
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                  <div className="text-sm font-semibold text-indigo-900 mb-2">Seat Pricing</div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 sm:p-4">
+                  <div className="text-xs sm:text-sm font-semibold text-indigo-900 mb-2">Seat Pricing</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div className="flex flex-col">
-                      <span className="text-gray-600">Lower Seater</span>
-                      <span className="font-bold text-indigo-700">₹{busInfo.route.fromStop.lowerSeaterPrice}</span>
+                      <span className="text-gray-600 text-[10px] sm:text-xs">Lower Seater</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice)}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-gray-600">Lower Sleeper</span>
-                      <span className="font-bold text-indigo-700">₹{busInfo.route.fromStop.lowerSleeperPrice}</span>
+                      <span className="text-gray-600 text-[10px] sm:text-xs">Lower Sleeper</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice)}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-gray-600">Upper Sleeper</span>
-                      <span className="font-bold text-indigo-700">₹{busInfo.route.fromStop.upperSleeperPrice}</span>
+                      <span className="text-gray-600 text-[10px] sm:text-xs">Upper Sleeper</span>
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice)}</span>
                     </div>
                   </div>
                 </div>
@@ -865,13 +1059,13 @@ export function BookingPage() {
                 currentDeck
               )}
 
-              <div className="mt-4 flex items-start gap-2 text-sm text-gray-600">
-                <FaInfoCircle className="mt-0.5" />
+              <div className="mt-4 flex items-start gap-2 text-xs sm:text-sm text-gray-600">
+                <FaInfoCircle className="mt-0.5 flex-shrink-0" />
                 <p>Click on available seats to select. You can select up to 6 seats.</p>
               </div>
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-gray-600">
+              <div className="mt-4 sm:mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs sm:text-sm text-gray-600">
                   {selectedSeats.length > 0
                     ? `Selected seats: ${selectedSeats.length}`
                     : 'Select seats to continue with booking.'}
@@ -879,7 +1073,7 @@ export function BookingPage() {
                 <button
                   onClick={handleOpenBookingModal}
                   disabled={selectedSeats.length === 0}
-                  className={`px-6 py-2.5 rounded-lg font-semibold transition-colors ${
+                  className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm sm:text-base font-semibold transition-colors ${
                     selectedSeats.length === 0
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow'
@@ -894,51 +1088,51 @@ export function BookingPage() {
           {/* Booking Side Panel */}
           <div className="lg:col-span-1">
             {isConfirmationReady ? (
-              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24 space-y-6">
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">Confirm Booking</h3>
-                  <span className="text-sm text-gray-500">{selectedSeats.length} seat{selectedSeats.length > 1 ? 's' : ''}</span>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">Confirm Booking</h3>
+                  <span className="text-xs sm:text-sm text-gray-500">{selectedSeats.length} seat{selectedSeats.length > 1 ? 's' : ''}</span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {seatDetails.map((seat) => (
                     <div
                       key={seat.id}
                       className="flex justify-between items-center px-3 py-2 rounded-lg border border-indigo-100 bg-indigo-50"
                     >
                       <div>
-                        <div className="text-sm font-semibold text-indigo-700">Seat {seat.seatNumber}</div>
-                        <div className="text-xs text-indigo-500">
+                        <div className="text-xs sm:text-sm font-semibold text-indigo-700">Seat {seat.seatNumber}</div>
+                        <div className="text-[10px] sm:text-xs text-indigo-500">
                           {seat.level} • {seat.type}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-indigo-700">₹{getSeatPrice(seat)}</span>
+                      <span className="text-xs sm:text-sm font-semibold text-indigo-700">₹{getSeatPrice(seat)}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-gray-200 pt-4 space-y-3">
+                <div className="border-t border-gray-200 pt-3 sm:pt-4 space-y-2 sm:space-y-3">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Boarding Point</div>
-                    <div className="text-sm font-semibold text-gray-800">
+                    <div className="text-[10px] sm:text-xs uppercase tracking-wide text-gray-500">Boarding Point</div>
+                    <div className="text-xs sm:text-sm font-semibold text-gray-800">
                       {selectedBoardingPoint?.name || 'Not selected'}
                     </div>
                     {selectedBoardingPoint?.time && (
-                      <div className="text-xs text-gray-500">{selectedBoardingPoint.time}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500">{selectedBoardingPoint.time}</div>
                     )}
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Dropping Point</div>
-                    <div className="text-sm font-semibold text-gray-800">
+                    <div className="text-[10px] sm:text-xs uppercase tracking-wide text-gray-500">Dropping Point</div>
+                    <div className="text-xs sm:text-sm font-semibold text-gray-800">
                       {selectedDroppingPoint?.name || 'Not selected'}
                     </div>
                     {selectedDroppingPoint?.time && (
-                      <div className="text-xs text-gray-500">{selectedDroppingPoint.time}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500">{selectedDroppingPoint.time}</div>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-600">
+                <div className="space-y-2 text-xs sm:text-sm text-gray-600">
                   <div className="flex justify-between font-medium">
                     <span>Subtotal</span>
                     <span>₹{seatDetails.reduce((total, seat) => total + getSeatPrice(seat), 0)}</span>
@@ -951,7 +1145,7 @@ export function BookingPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
+                  <div className="flex justify-between text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
                     <span>Total</span>
                     <span className="text-indigo-600">₹{getTotalAmount()}</span>
                   </div>
@@ -959,18 +1153,18 @@ export function BookingPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Have a coupon?</label>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Have a coupon?</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         placeholder="Enter code"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                       />
                       <button
                         onClick={handleApplyCoupon}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                        className="px-3 sm:px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                       >
                         Apply
                       </button>
@@ -980,7 +1174,7 @@ export function BookingPage() {
                   <button
                     onClick={handleConfirmBooking}
                     disabled={bookingLoading || selectedSeats.length === 0}
-                    className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                    className={`w-full py-3 rounded-lg text-sm sm:text-base font-semibold transition-colors ${
                       bookingLoading
                         ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow'
@@ -991,71 +1185,72 @@ export function BookingPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Bus Photos</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Bus Photos</h3>
                   <div className="rounded-xl overflow-hidden">
                     <BusImageCarousel
                       images={busInfo.bus.images || []}
                       busName={busInfo.bus.name}
-                      heightClass="h-64 sm:h-72"
+                      heightClass="h-48 sm:h-64 lg:h-72"
                     />
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Route Overview</h3>
+                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Route Overview</h3>
                   {renderRoutePath() || (
-                    <div className="text-sm text-gray-500">Route details unavailable.</div>
+                    <div className="text-xs sm:text-sm text-gray-500">Route details unavailable.</div>
                   )}
                 </div>
               </div>
             )}
           </div>
+          </div>
         </div>
       </div>
 
-      {showBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4 py-6">
-          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+  {!isMobile && showBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
+          <div className="relative w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto">
             <button
               onClick={handleCloseBookingModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 text-gray-400 hover:text-gray-600 text-2xl sm:text-xl font-bold bg-white rounded-full w-8 h-8 flex items-center justify-center"
               aria-label="Close booking modal"
             >
               ×
             </button>
 
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-center gap-4">
+            <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div
-                  className={`flex items-center gap-3 ${
+                  className={`flex items-center gap-2 sm:gap-3 ${
                     modalStage === 'BOARDING' ? 'text-indigo-600' : 'text-gray-400'
                   }`}
                 >
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
                       modalStage === 'BOARDING' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     1
                   </div>
-                  <span className="text-sm font-semibold">Boarding & Dropping</span>
+                  <span className="text-xs sm:text-sm font-semibold">Boarding & Dropping</span>
                 </div>
-                <span className="text-lg text-gray-300">→</span>
+                <span className="hidden sm:inline text-lg text-gray-300">→</span>
                 <div
-                  className={`flex items-center gap-3 ${
+                  className={`flex items-center gap-2 sm:gap-3 ${
                     modalStage === 'PASSENGER' ? 'text-indigo-600' : 'text-gray-400'
                   }`}
                 >
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
                       modalStage === 'PASSENGER' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     2
                   </div>
-                  <span className="text-sm font-semibold">Passenger Details</span>
+                  <span className="text-xs sm:text-sm font-semibold">Passenger Details</span>
                 </div>
               </div>
 

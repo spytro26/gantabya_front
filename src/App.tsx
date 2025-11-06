@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { Signup } from './pages/signup';
 import { Signin } from './pages/user-signin';
+import { UserForgotPassword } from './pages/user-forgot-password';
 import { AdminSignin } from './pages/admin-signin';
 import AdminSignup from './pages/admin-signup';
 import AdminDashboard from './pages/admin-dashboard';
@@ -20,12 +21,15 @@ import AdminForgotPassword from './pages/admin-forgot-password';
 import { UserHome } from './pages/user-home';
 import { SearchResults } from './pages/search-results';
 import { BookingPage } from './pages/booking-page';
+import { BookingBoardingPage } from './pages/booking-boarding';
+import { BookingPassengerPage } from './pages/booking-passenger';
 import { MyBookings } from './pages/my-bookings';
 import { UserProfile } from './pages/user-profile';
 import { Notifications } from './pages/notifications';
 import SuperAdminSignin from './pages/superadmin-signin';
 import SuperAdminDashboard from './pages/superadmin-dashboard';
 import SuperAdminAdminProfile from './pages/superadmin-admin-profile';
+import SuperAdminOffers from './pages/superadmin-offers';
 
 function App() {
   return (
@@ -36,10 +40,13 @@ function App() {
         
         {/* User Routes */}
         <Route path="/signup" element={<Signup />} />
-        <Route path="/signin" element={<Signin />} />
+    <Route path="/signin" element={<Signin />} />
+    <Route path="/forgot-password" element={<UserForgotPassword />} />
         <Route path="/home" element={<UserHome />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/book/:tripId" element={<BookingPage />} />
+    <Route path="/book/:tripId/boarding" element={<BookingBoardingPage />} />
+    <Route path="/book/:tripId/passengers" element={<BookingPassengerPage />} />
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/notifications" element={<Notifications />} />
@@ -65,6 +72,7 @@ function App() {
         {/* Super Admin Routes */}
         <Route path="/superadmin" element={<SuperAdminSignin />} />
         <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/superadmin/offers" element={<SuperAdminOffers />} />
         <Route path="/superadmin/admin/:adminId" element={<SuperAdminAdminProfile />} />
       </Routes>
     </BrowserRouter>

@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
   USER_SIGNUP: "/user/signup",
   USER_SIGNIN: "/user/signin",
   USER_VERIFY_EMAIL: "/user/verifyEmail",
+  USER_FORGOT_PASSWORD: "/user/forgot-password",
+  USER_RESET_PASSWORD: "/user/reset-password",
   USER_PROFILE: "/user/profile",
 
   // User Booking

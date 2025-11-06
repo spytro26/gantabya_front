@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { API_ENDPOINTS, APP_NAME } from '../config';
-import busLogo from '../assets/buslogo.jpg';
+import { API_ENDPOINTS } from '../config';
+import { UserNavbar } from '../components/UserNavbar';
 import {
   FaMapMarkerAlt,
   FaRupeeSign,
-  FaUser,
-  FaBell,
-  FaTicketAlt,
   FaCalendar,
   FaTimesCircle,
+  FaTicketAlt,
 } from 'react-icons/fa';
 
 interface Booking {
@@ -166,55 +164,7 @@ export function MyBookings() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header/Navbar */}
-      <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <img
-                src={busLogo}
-                alt="Logo"
-                className="w-16 h-16 rounded-full object-cover"
-              />
-              <span className="text-2xl font-bold text-indigo-900">
-                {APP_NAME}
-              </span>
-            </div>
-            <div className="flex items-center space-x-6">
-              <Link
-                to="/home"
-                className="text-gray-700 hover:text-indigo-600 font-medium"
-              >
-                Home
-              </Link>
-              <Link
-                to="/my-bookings"
-                className="text-indigo-600 font-semibold flex items-center gap-2"
-              >
-                <FaTicketAlt />
-                My Bookings
-              </Link>
-              <Link
-                to="/notifications"
-                className="relative text-gray-700 hover:text-indigo-600"
-              >
-                <FaBell className="text-xl" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-              >
-                <FaUser />
-                Profile
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <UserNavbar unreadCount={unreadCount} currentPage="my-bookings" />
 
       {/* Page Header */}
       <div className="bg-indigo-600 text-white py-8">

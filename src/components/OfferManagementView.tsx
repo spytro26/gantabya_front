@@ -179,7 +179,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center space-x-3">
               <FaTags className="text-yellow-600" />
@@ -192,7 +192,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
           </div>
           <button
             onClick={() => setShowForm((prev) => !prev)}
-            className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition flex items-center space-x-2 self-start"
+            className="w-full sm:w-auto px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition flex items-center justify-center space-x-2"
           >
             <FaPlus />
             <span>{showForm ? 'Cancel' : 'Create Offer'}</span>

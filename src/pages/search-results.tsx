@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
-import { API_ENDPOINTS, APP_NAME } from '../config';
-import busLogo from '../assets/buslogo.jpg';
+import { API_ENDPOINTS } from '../config';
+import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
 import {
   FaMapMarkerAlt,
@@ -13,9 +13,7 @@ import {
   FaSnowflake,
   FaFilter,
   FaArrowLeft,
-  FaUser,
-  FaBell,
-  FaTicketAlt,
+  FaTimes,
 } from 'react-icons/fa';
 
 interface Bus {
@@ -62,6 +60,7 @@ export function SearchResults() {
     busType: 'ALL',
     sortBy: 'price',
   });
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -171,74 +170,108 @@ export function SearchResults() {
 
   const filteredBuses = getFilteredAndSortedBuses();
 
+  const renderFilters = (variant: 'desktop' | 'mobile') => (
+    <div
+      className={`bg-white rounded-lg shadow ${
+        variant === 'mobile'
+          ? 'p-5 max-h-[80vh] overflow-y-auto'
+          : 'p-6 sticky top-24'
+      }`}
+    >
+      <div
+        className={`flex items-center justify-between ${
+          variant === 'mobile' ? 'mb-5' : 'mb-6'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <FaFilter className="text-indigo-600" />
+          <h3 className="text-lg font-semibold">Filters & Sort</h3>
+        </div>
+        {variant === 'mobile' && (
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(false)}
+            className="p-2 text-gray-500 hover:text-gray-700"
+            aria-label="Close filters"
+          >
+            <FaTimes />
+          </button>
+        )}
+      </div>
+
+      {/* Bus Type Filter */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Bus Type
+        </label>
+        <div className="space-y-2">
+          {['ALL', 'SEATER', 'SLEEPER', 'MIXED'].map((type) => (
+            <label key={type} className="flex items-center">
+              <input
+                type="radio"
+                name="busType"
+                value={type}
+                checked={filters.busType === type}
+                onChange={(e) =>
+                  setFilters({ ...filters, busType: e.target.value })
+                }
+                className="mr-2 text-indigo-600"
+              />
+              <span className="text-sm text-gray-700">{type}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Sort By */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Sort By
+        </label>
+        <select
+          value={filters.sortBy}
+          onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="price">Price: Low to High</option>
+          <option value="departure">Departure Time</option>
+          <option value="duration">Duration</option>
+          <option value="seats">Available Seats</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setFilters({ busType: 'ALL', sortBy: 'price' });
+          if (variant === 'mobile') {
+            setShowMobileFilters(false);
+          }
+        }}
+        className="mt-6 w-full text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+      >
+        Clear All Filters
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header/Navbar */}
-      <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <img
-                src={busLogo}
-                alt="Logo"
-                className="w-16 h-16 rounded-full object-cover"
-              />
-              <span className="text-2xl font-bold text-indigo-900">
-                {APP_NAME}
-              </span>
-            </div>
-
-            {/* Nav Links */}
-            <div className="flex items-center space-x-6">
-              <Link
-                to="/home"
-                className="text-gray-700 hover:text-indigo-600 font-medium"
-              >
-                Home
-              </Link>
-              <Link
-                to="/my-bookings"
-                className="text-gray-700 hover:text-indigo-600 font-medium flex items-center gap-2"
-              >
-                <FaTicketAlt />
-                My Bookings
-              </Link>
-              <Link
-                to="/notifications"
-                className="relative text-gray-700 hover:text-indigo-600"
-              >
-                <FaBell className="text-xl" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-              >
-                <FaUser />
-                <span className="font-medium">Profile</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <UserNavbar unreadCount={unreadCount} currentPage="search" />
 
       {/* Search Info Bar */}
       <div className="bg-indigo-600 text-white py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/home')}
-              className="flex items-center gap-2 text-indigo-100 hover:text-white"
+              className="inline-flex items-center gap-2 text-sm font-medium text-indigo-100 hover:text-white"
             >
-              <FaArrowLeft />
+              <FaArrowLeft className="text-xs" />
               <span>Modify Search</span>
             </button>
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
                 <FaMapMarkerAlt />
                 <span className="font-semibold">{searchParams?.startLocation}</span>
@@ -265,72 +298,30 @@ export function SearchResults() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-24">
-              <div className="flex items-center gap-2 mb-6">
-                <FaFilter className="text-indigo-600" />
-                <h3 className="text-lg font-semibold">Filters</h3>
-              </div>
-
-              {/* Bus Type Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Bus Type
-                </label>
-                <div className="space-y-2">
-                  {['ALL', 'SEATER', 'SLEEPER', 'MIXED'].map((type) => (
-                    <label key={type} className="flex items-center">
-                      <input
-                        type="radio"
-                        name="busType"
-                        value={type}
-                        checked={filters.busType === type}
-                        onChange={(e) =>
-                          setFilters({ ...filters, busType: e.target.value })
-                        }
-                        className="mr-2 text-indigo-600"
-                      />
-                      <span className="text-sm text-gray-700">{type}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sort By */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Sort By
-                </label>
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) =>
-                    setFilters({ ...filters, sortBy: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="price">Price: Low to High</option>
-                  <option value="departure">Departure Time</option>
-                  <option value="duration">Duration</option>
-                  <option value="seats">Available Seats</option>
-                </select>
-              </div>
-
-              <button
-                onClick={() =>
-                  setFilters({ busType: 'ALL', sortBy: 'price' })
-                }
-                className="mt-6 w-full text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-              >
-                Clear All Filters
-              </button>
-            </div>
+          <div className="hidden lg:block lg:col-span-1">
+            {renderFilters('desktop')}
           </div>
 
           {/* Results Section */}
           <div className="lg:col-span-3">
+            <div className="flex items-center justify-between mb-4 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full shadow-sm text-sm font-medium text-gray-700"
+              >
+                <FaFilter className="text-indigo-600" />
+                Filters & Sort
+              </button>
+              <div className="text-xs text-gray-500">
+                {filteredBuses.length}{' '}
+                {filteredBuses.length === 1 ? 'option' : 'options'}
+              </div>
+            </div>
+
             {loading ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
@@ -371,104 +362,132 @@ export function SearchResults() {
                   {filteredBuses.map((bus) => (
                     <div
                       key={bus.tripId}
-                      className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6"
+                      className="bg-white rounded-2xl border-2 border-indigo-100 sm:border sm:border-indigo-50 sm:ring-1 sm:ring-indigo-50/80 shadow-[0_8px_24px_rgba(79,70,229,0.08)] hover:shadow-[0_12px_32px_rgba(79,70,229,0.12)] transition-all overflow-hidden"
                     >
-                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                      <div className="flex flex-col lg:flex-row lg:items-stretch">
                         {/* Bus Images - Show on left side */}
                         {bus.images && bus.images.length > 0 && (
-                          <div className="lg:w-64 flex-shrink-0">
+                          <div className="w-full lg:w-72 flex-shrink-0 overflow-hidden lg:border-r lg:border-indigo-50">
                             <BusImageCarousel images={bus.images} busName={bus.busName} />
                           </div>
                         )}
 
                         {/* Bus Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h3 className="text-xl font-bold text-gray-900">
-                                {bus.busName}
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                {bus.busNumber} • {bus.busType}
-                              </p>
-                            </div>
-                            <div className="text-right lg:hidden">
-                              <div className="text-2xl font-bold text-indigo-600">
-                                ₹{bus.price}
+                        <div className="flex-1 flex flex-col">
+                          <div className="p-4 sm:p-6 space-y-4 flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-50/80 border border-indigo-100 text-indigo-600">
+                                    {bus.busType}
+                                  </span>
+                                  <span className="text-gray-400 normal-case font-medium">
+                                    {bus.busNumber}
+                                  </span>
+                                </div>
+                                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                                  {bus.busName}
+                                </h3>
                               </div>
-                              <div className="text-xs text-gray-500">per seat</div>
+                              <div className="hidden lg:flex flex-col items-end gap-2">
+                                <div className="text-2xl font-bold text-indigo-600">
+                                  ₹{bus.price}
+                                </div>
+                                <div className="text-xs text-gray-500">per seat</div>
+                                <button
+                                  onClick={() => handleBookNow(bus)}
+                                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-sm"
+                                >
+                                  View Seats
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 sm:p-5 relative">
+                              <div className="absolute top-5 bottom-5 left-5 hidden sm:block border-l border-dashed border-indigo-200"></div>
+                              <div className="flex flex-col sm:grid sm:grid-cols-3 sm:items-center gap-4 sm:gap-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-3 w-3 rounded-full bg-indigo-500"></div>
+                                  <div>
+                                    <div className="text-base font-semibold text-gray-900">
+                                      {bus.departureTime}
+                                    </div>
+                                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                      {bus.fromStop}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-start sm:items-center justify-center text-xs text-gray-500 sm:text-sm">
+                                  <span className="font-semibold text-gray-700">
+                                    {bus.duration}
+                                  </span>
+                                  <span className="sm:w-16 sm:h-px sm:bg-indigo-200 sm:my-2 hidden sm:block"></span>
+                                  <span className="uppercase tracking-wide text-[10px] sm:text-xs">
+                                    journey time
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 sm:justify-end">
+                                  <div className="h-3 w-3 rounded-full bg-rose-500"></div>
+                                  <div className="text-right">
+                                    <div className="text-base font-semibold text-gray-900">
+                                      {bus.arrivalTime}
+                                    </div>
+                                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                      {bus.toStop}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                              {bus.amenities.hasWifi && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600 shadow-sm">
+                                  <FaWifi className="text-blue-500" />
+                                  WiFi
+                                </span>
+                              )}
+                              {bus.amenities.hasAC && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600 shadow-sm">
+                                  <FaSnowflake className="text-cyan-500" />
+                                  AC
+                                </span>
+                              )}
+                              {bus.amenities.hasCharging && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600 shadow-sm">
+                                  <FaBolt className="text-yellow-500" />
+                                  Charging
+                                </span>
+                              )}
+                              {!bus.amenities.hasWifi &&
+                                !bus.amenities.hasAC &&
+                                !bus.amenities.hasCharging && (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600 shadow-sm">
+                                    Basic amenities
+                                  </span>
+                                )}
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 mb-3">
-                            <div>
-                              <div className="text-lg font-semibold text-gray-900">
-                                {bus.departureTime}
+                          <div className="border-t border-gray-100 bg-gray-50/70 px-4 sm:px-6 py-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <FaChair className="text-indigo-500" />
+                                <span>{bus.availableSeats} seats available</span>
                               </div>
-                              <div className="text-sm text-gray-600">
-                                {bus.fromStop}
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-500">
-                                {bus.duration}
-                              </div>
-                              <div className="text-xs text-gray-400">---</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-gray-900">
-                                {bus.arrivalTime}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {bus.toStop}
+                              <div className="flex items-center gap-3 sm:w-auto w-full justify-between sm:justify-end">
+                                <div className="text-left lg:hidden">
+                                  <div className="text-lg font-bold text-indigo-600">₹{bus.price}</div>
+                                  <div className="text-xs text-gray-500">per seat</div>
+                                </div>
+                                <button
+                                  onClick={() => handleBookNow(bus)}
+                                  className="w-full sm:w-auto lg:hidden px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-sm"
+                                >
+                                  View Seats
+                                </button>
                               </div>
                             </div>
-                          </div>
-
-                          {/* Amenities */}
-                          <div className="flex items-center gap-4 text-sm">
-                            {bus.amenities.hasWifi && (
-                              <span className="flex items-center gap-1 text-gray-600">
-                                <FaWifi className="text-blue-500" />
-                                WiFi
-                              </span>
-                            )}
-                            {bus.amenities.hasAC && (
-                              <span className="flex items-center gap-1 text-gray-600">
-                                <FaSnowflake className="text-cyan-500" />
-                                AC
-                              </span>
-                            )}
-                            {bus.amenities.hasCharging && (
-                              <span className="flex items-center gap-1 text-gray-600">
-                                <FaBolt className="text-yellow-500" />
-                                Charging
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Booking Section */}
-                        <div className="flex flex-col items-end gap-3">
-                          <div className="hidden lg:block text-right mb-2">
-                            <div className="text-2xl font-bold text-indigo-600">
-                              ₹{bus.price}
-                            </div>
-                            <div className="text-xs text-gray-500">per seat</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center gap-2 text-gray-600 mb-2">
-                              <FaChair />
-                              <span className="text-sm">
-                                {bus.availableSeats} seats available
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => handleBookNow(bus)}
-                              className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
-                            >
-                              View Seats
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -480,6 +499,21 @@ export function SearchResults() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Filters Drawer */}
+      {showMobileFilters && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowMobileFilters(false)}
+            aria-label="Close filters"
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-6 shadow-2xl">
+            {renderFilters('mobile')}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

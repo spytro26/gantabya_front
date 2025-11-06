@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS, APP_NAME } from '../config';
 import busLogo from '../assets/buslogo.jpg';
-import { FaEnvelope, FaLock, FaBus } from 'react-icons/fa';
+import { FaEnvelope, FaLock } from 'react-icons/fa';
 
 export function Signin() {
   const navigate = useNavigate();
@@ -88,6 +88,15 @@ export function Signin() {
               </div>
             </div>
 
+            <div className="text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -114,15 +123,6 @@ export function Signin() {
                 className="text-indigo-600 hover:text-indigo-700 font-semibold"
               >
                 Sign Up
-              </Link>
-            </p>
-            <p className="text-sm text-gray-600">
-              <Link
-                to="/admin/signin"
-                className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center justify-center gap-1"
-              >
-                <FaBus className="text-sm" />
-                Admin Login
               </Link>
             </p>
           </div>

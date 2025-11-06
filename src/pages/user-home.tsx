@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS, APP_NAME } from '../config';
-import busLogo from '../assets/buslogo.jpg';
+import { UserNavbar } from '../components/UserNavbar';
 import {
   FaBus,
   FaCalendar,
   FaMapMarkerAlt,
   FaSearch,
-  FaUser,
-  FaBell,
-  FaTicketAlt,
   FaWifi,
   FaClock,
   FaDollarSign,
@@ -19,10 +16,26 @@ import {
   FaExchangeAlt,
 } from 'react-icons/fa';
 
+interface PublicOffer {
+  id: string;
+  code: string;
+  description: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  creatorRole: 'ADMIN' | 'SUPERADMIN';
+  busServiceName?: string | null;
+  minBookingAmount?: number | null;
+  maxDiscount?: number | null;
+  usageLimit?: number | null;
+  usageCount?: number;
+  validFrom: string;
+  validUntil: string;
+}
+
 export function UserHome() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [offers, setOffers] = useState<any[]>([]);
+  const [offers, setOffers] = useState<PublicOffer[]>([]);
   const [searchForm, setSearchForm] = useState({
     startLocation: '',
     endLocation: '',
@@ -103,138 +116,103 @@ export function UserHome() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header/Navbar */}
-      <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <img
-                src={busLogo}
-                alt="Logo"
-                className="w-16 h-16 rounded-full object-cover"
-              />
-              <span className="text-2xl font-bold text-indigo-900">
-                {APP_NAME}
-              </span>
-            </div>
-
-            {/* Nav Links */}
-            <div className="flex items-center space-x-6">
-              <Link
-                to="/home"
-                className="text-gray-700 hover:text-indigo-600 font-medium"
-              >
-                Home
-              </Link>
-              <Link
-                to="/my-bookings"
-                className="text-gray-700 hover:text-indigo-600 font-medium flex items-center gap-2"
-              >
-                <FaTicketAlt />
-                My Bookings
-              </Link>
-              <Link
-                to="/notifications"
-                className="relative text-gray-700 hover:text-indigo-600"
-              >
-                <FaBell className="text-xl" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-              >
-                <FaUser />
-                <span className="font-medium">{user?.name || 'Profile'}</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <UserNavbar user={user} unreadCount={unreadCount} currentPage="home" />
 
       {/* Hero Section with Search */}
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4">Welcome to {APP_NAME}</h1>
-            <p className="text-xl text-indigo-100">
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 sm:py-8 lg:py-12">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="text-center mb-4 sm:mb-8 lg:mb-12">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-1 sm:mb-2 lg:mb-4">Welcome to {APP_NAME}</h1>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-indigo-100">
               Your Journey, Our Priority
             </p>
           </div>
 
           {/* Search Box */}
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid md:grid-cols-[1fr_auto_1fr_1fr] gap-4 items-end">
-                {/* From */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    From
-                  </label>
-                  <div className="relative">
-                    <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      required
-                      value={searchForm.startLocation}
-                      onChange={(e) =>
-                        setSearchForm({
-                          ...searchForm,
-                          startLocation: e.target.value,
-                        })
-                      }
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-                      placeholder="Enter city"
-                    />
+          <div className="max-w-4xl mx-auto bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-6 xl:p-8">
+            <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4 lg:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_1fr] gap-3 sm:gap-4 sm:items-end">
+                <div className="relative flex flex-col gap-3 sm:contents">
+                  {/* From */}
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                      From
+                    </label>
+                    <div className="relative">
+                      <FaMapMarkerAlt className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base" />
+                      <input
+                        type="text"
+                        required
+                        value={searchForm.startLocation}
+                        onChange={(e) =>
+                          setSearchForm({
+                            ...searchForm,
+                            startLocation: e.target.value,
+                          })
+                        }
+                        className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-2.5 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                        placeholder="Enter city"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Swap Button */}
-                <div className="pb-1">
-                  <button
-                    type="button"
-                    onClick={handleSwapCities}
-                    className="p-3 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors"
-                    title="Swap cities"
-                  >
-                    <FaExchangeAlt className="text-xl" />
-                  </button>
-                </div>
+                  {/* Swap Button - Mobile */}
+                  <div className="sm:hidden -my-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleSwapCities}
+                      className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500 text-white shadow-xl shadow-indigo-200 ring-4 ring-white transition-transform duration-150 hover:bg-indigo-600 active:scale-95"
+                      title="Swap cities"
+                      aria-label="Swap start and end locations"
+                    >
+                      <FaExchangeAlt className="text-xl" />
+                    </button>
+                  </div>
 
-                {/* To */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    To
-                  </label>
-                  <div className="relative">
-                    <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      required
-                      value={searchForm.endLocation}
-                      onChange={(e) =>
-                        setSearchForm({
-                          ...searchForm,
-                          endLocation: e.target.value,
-                        })
-                      }
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-                      placeholder="Enter city"
-                    />
+                  {/* Swap Button - Tablet/Desktop */}
+                  <div className="hidden sm:flex sm:pb-1 justify-center items-center lg:block">
+                    <button
+                      type="button"
+                      onClick={handleSwapCities}
+                      className="p-2 sm:p-2.5 lg:p-3 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors"
+                      title="Swap cities"
+                      aria-label="Swap start and end locations"
+                    >
+                      <FaExchangeAlt className="text-base sm:text-lg lg:text-xl" />
+                    </button>
+                  </div>
+
+                  {/* To */}
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                      To
+                    </label>
+                    <div className="relative">
+                      <FaMapMarkerAlt className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base" />
+                      <input
+                        type="text"
+                        required
+                        value={searchForm.endLocation}
+                        onChange={(e) =>
+                          setSearchForm({
+                            ...searchForm,
+                            endLocation: e.target.value,
+                          })
+                        }
+                        className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-2.5 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                        placeholder="Enter city"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Journey Date
                   </label>
                   <div className="relative">
-                    <FaCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <FaCalendar className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base" />
                     <input
                       type="date"
                       required
@@ -243,7 +221,7 @@ export function UserHome() {
                       onChange={(e) =>
                         setSearchForm({ ...searchForm, date: e.target.value })
                       }
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
+                      className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -251,9 +229,9 @@ export function UserHome() {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 text-white py-2.5 sm:py-3 lg:py-4 rounded-lg font-semibold text-sm sm:text-base lg:text-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
               >
-                <FaSearch />
+                <FaSearch className="text-sm sm:text-base" />
                 Search Buses
               </button>
             </form>
@@ -268,7 +246,13 @@ export function UserHome() {
             Special Offers & Coupons
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {offers.map((offer) => (
+            {offers.map((offer) => {
+              const usesLeft =
+                offer.usageLimit !== null && offer.usageLimit !== undefined
+                  ? Math.max(offer.usageLimit - (offer.usageCount || 0), 0)
+                  : null;
+
+              return (
               <div
                 key={offer.id}
                 className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow"
@@ -289,35 +273,36 @@ export function UserHome() {
                 <div className="mb-2">
                   {offer.creatorRole === 'SUPERADMIN' ? (
                     <p className="text-sm font-medium bg-white/20 rounded px-2 py-1 inline-block">
-                      ✨ Applied on all buses
+                      🌐 Offer available for every bus
                     </p>
                   ) : offer.creatorRole === 'ADMIN' && offer.busServiceName ? (
                     <p className="text-sm font-medium bg-white/20 rounded px-2 py-1 inline-block">
-                      🚌 Applied on {offer.busServiceName} buses
+                      🚌 Offer from {offer.busServiceName}
                     </p>
                   ) : null}
                 </div>
 
                 {/* Min/Max limits */}
-                <div className="space-y-1">
-                  {offer.minBookingAmount && (
-                    <p className="text-sm opacity-90">
-                      💰 Min booking: ₹{offer.minBookingAmount}
-                    </p>
+                <div className="space-y-1 text-sm opacity-90">
+                  <p>
+                    📅 Valid: {new Date(offer.validFrom).toLocaleDateString()} –{' '}
+                    {new Date(offer.validUntil).toLocaleDateString()}
+                  </p>
+                  {offer.minBookingAmount ? (
+                    <p>💰 Minimum booking: ₹{offer.minBookingAmount}</p>
+                  ) : (
+                    <p>💰 No minimum booking required</p>
                   )}
                   {offer.maxDiscount && (
-                    <p className="text-sm opacity-90">
-                      🎯 Max discount: ₹{offer.maxDiscount}
-                    </p>
+                    <p>🎯 Maximum savings: ₹{offer.maxDiscount}</p>
                   )}
-                  {offer.usageLimit && (
-                    <p className="text-sm opacity-90">
-                      ⏰ Limited: {offer.usageLimit - offer.usageCount} uses left
-                    </p>
+                  {usesLeft !== null && (
+                    <p>⏳ Uses left: {usesLeft}</p>
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -33,11 +33,30 @@ interface Bus {
   busNumber: string;
   name: string;
   type: string;
+  layoutType: string;
   totalSeats: number;
+  stops: BusStop[];
+  images: BusImage[];
   _count: {
     trips: number;
     stops: number;
   };
+}
+
+interface BusStop {
+  id: string;
+  name: string;
+  city: string;
+  stopIndex: number;
+  lowerSeaterPrice: number;
+  lowerSleeperPrice: number;
+  upperSleeperPrice: number;
+}
+
+interface BusImage {
+  id: string;
+  imageUrl: string;
+  createdAt: string;
 }
 
 interface Trip {
@@ -130,12 +149,24 @@ export default function SuperAdminAdminProfile() {
   const totalBookings = trips.reduce((sum, trip) => sum + trip._count.bookings, 0);
   const activeTrips = trips.filter((t) => t.status === "SCHEDULED" || t.status === "ONGOING").length;
 
+  const formatCurrency = (value?: number | null) => {
+    if (value === null || value === undefined) {
+      return "—";
+    }
+
+    if (Number.isNaN(value)) {
+      return "—";
+    }
+
+    return value > 0 ? `₹${value.toLocaleString("en-IN")}` : "₹0";
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Header */}
       <nav className="bg-gray-900 border-b border-gray-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center space-x-4">
               <Link
                 to="/superadmin/dashboard"
@@ -145,7 +176,7 @@ export default function SuperAdminAdminProfile() {
                 <span>Back to Dashboard</span>
               </Link>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center space-x-3">
               <img src={busLogo} alt="Logo" className="h-10 w-10 rounded-full" />
               <FaShieldAlt className="text-red-500 text-2xl" />
             </div>
@@ -155,8 +186,8 @@ export default function SuperAdminAdminProfile() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Admin Header Card */}
-        <div className="bg-gray-800 rounded-xl shadow-2xl p-6 mb-6 border border-gray-700">
-          <div className="flex items-start justify-between">
+        <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 mb-6 border border-gray-700">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-start space-x-4">
               <div className="bg-red-600 p-4 rounded-full">
                 <FaUser className="text-white text-3xl" />
@@ -175,10 +206,10 @@ export default function SuperAdminAdminProfile() {
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="mb-2">
+            <div className="flex flex-col items-start lg:items-end gap-2">
+              <div className="flex items-center">
                 {admin.adminVerified ? (
-                  <span className="px-4 py-2 bg-green-600 text-white rounded-full text-sm font-semibold flex items-center space-x-2">
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full text-sm font-semibold">
                     <FaCheckCircle />
                     <span>Verified Admin</span>
                   </span>
@@ -253,12 +284,12 @@ export default function SuperAdminAdminProfile() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+        <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
           <div className="border-b border-gray-700">
-            <div className="flex space-x-4 px-6">
+            <div className="flex space-x-4 px-6 overflow-x-auto pb-1">
               <button
                 onClick={() => setActiveTab("overview")}
-                className={`py-4 px-6 font-semibold transition ${
+                className={`py-4 px-6 font-semibold transition flex-shrink-0 ${
                   activeTab === "overview"
                     ? "text-red-500 border-b-2 border-red-500"
                     : "text-gray-400 hover:text-gray-200"
@@ -268,7 +299,7 @@ export default function SuperAdminAdminProfile() {
               </button>
               <button
                 onClick={() => setActiveTab("buses")}
-                className={`py-4 px-6 font-semibold transition ${
+                className={`py-4 px-6 font-semibold transition flex-shrink-0 ${
                   activeTab === "buses"
                     ? "text-red-500 border-b-2 border-red-500"
                     : "text-gray-400 hover:text-gray-200"
@@ -278,7 +309,7 @@ export default function SuperAdminAdminProfile() {
               </button>
               <button
                 onClick={() => setActiveTab("trips")}
-                className={`py-4 px-6 font-semibold transition ${
+                className={`py-4 px-6 font-semibold transition flex-shrink-0 ${
                   activeTab === "trips"
                     ? "text-red-500 border-b-2 border-red-500"
                     : "text-gray-400 hover:text-gray-200"
@@ -359,18 +390,92 @@ export default function SuperAdminAdminProfile() {
                     {buses.map((bus) => (
                       <div
                         key={bus.id}
-                        className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition"
+                        className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition border border-gray-600"
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-white font-bold text-lg">{bus.busNumber}</h4>
-                            <p className="text-gray-300">{bus.name}</p>
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
-                              <span>Type: {bus.type}</span>
-                              <span>Seats: {bus.totalSeats}</span>
-                              <span>Stops: {bus._count.stops}</span>
-                              <span>Trips: {bus._count.trips}</span>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            <div>
+                              <h4 className="text-white font-bold text-lg">{bus.busNumber}</h4>
+                              <p className="text-gray-300 text-sm">{bus.name}</p>
+                                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-300">
+                                <span className="bg-gray-800 px-3 py-1 rounded-full border border-gray-600">Type: {bus.type}</span>
+                                <span className="bg-gray-800 px-3 py-1 rounded-full border border-gray-600">Layout: {bus.layoutType.replace(/_/g, " ")}</span>
+                                <span className="bg-gray-800 px-3 py-1 rounded-full border border-gray-600">Seats: {bus.totalSeats}</span>
+                                <span className="bg-gray-800 px-3 py-1 rounded-full border border-gray-600">Stops: {bus._count.stops}</span>
+                                <span className="bg-gray-800 px-3 py-1 rounded-full border border-gray-600">Trips: {bus._count.trips}</span>
+                              </div>
                             </div>
+                          </div>
+
+                          <div className="border-t border-gray-600 pt-4 space-y-4">
+                            <div>
+                              <h5 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Route &amp; Fares</h5>
+                              {bus.stops.length >= 2 ? (
+                                <div className="mt-3 space-y-3">
+                                  <div className="flex items-center gap-2 text-sm text-gray-200">
+                                    <FaRoute className="text-gray-400" />
+                                    <span>
+                                      {(bus.stops[0].city || bus.stops[0].name) ?? "Origin"} → {(bus.stops[bus.stops.length - 1].city || bus.stops[bus.stops.length - 1].name) ?? "Destination"}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    {[{
+                                      label: "Lower Seater",
+                                      value: bus.stops[bus.stops.length - 1].lowerSeaterPrice,
+                                    }, {
+                                      label: "Lower Sleeper",
+                                      value: bus.stops[bus.stops.length - 1].lowerSleeperPrice,
+                                    }, {
+                                      label: "Upper Sleeper",
+                                      value: bus.stops[bus.stops.length - 1].upperSleeperPrice,
+                                    }].map((fare) => (
+                                      <div key={fare.label} className="bg-gray-800/60 border border-gray-600 rounded-lg px-3 py-2">
+                                        <p className="text-gray-400 text-xs uppercase">{fare.label}</p>
+                                        <p className="text-white font-semibold text-sm">{formatCurrency(fare.value)}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-400 mt-2">Route information not configured yet.</p>
+                              )}
+                            </div>
+
+                            {bus.stops.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Stops</h5>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {bus.stops.map((stop) => (
+                                    <span
+                                      key={stop.id}
+                                      className="px-3 py-1 rounded-full border border-gray-600 text-xs text-gray-200 bg-gray-800"
+                                    >
+                                      {stop.stopIndex + 1}. {stop.city || stop.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {bus.images.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Gallery</h5>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                                  {bus.images.map((image) => (
+                                    <div
+                                      key={image.id}
+                                      className="overflow-hidden rounded-lg border border-gray-600 bg-gray-800"
+                                    >
+                                      <img
+                                        src={image.imageUrl}
+                                        alt={`${bus.name} view`}
+                                        className="w-full h-40 sm:h-48 object-cover transition-transform duration-200 hover:scale-105"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -391,21 +496,21 @@ export default function SuperAdminAdminProfile() {
                     {trips.slice(0, 20).map((trip) => (
                       <div
                         key={trip.id}
-                        className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition"
+                        className="bg-gray-700/80 rounded-2xl p-5 border border-gray-600 hover:border-gray-500 transition"
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-2">
                             <h4 className="text-white font-bold">
                               {trip.bus.busNumber} - {trip.bus.name}
                             </h4>
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-300">
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
                               <span>Date: {new Date(trip.tripDate).toLocaleDateString()}</span>
                               <span>Bookings: {trip._count.bookings}</span>
                             </div>
                           </div>
-                          <div>
+                          <div className="sm:self-end">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
                                 trip.status === "SCHEDULED"
                                   ? "bg-blue-600 text-white"
                                   : trip.status === "ONGOING"

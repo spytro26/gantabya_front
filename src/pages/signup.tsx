@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS, APP_NAME } from '../config';
 import busLogo from '../assets/buslogo.jpg';
-import { FaEnvelope, FaLock, FaUser, FaBus } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 
 export function Signup() {
   const navigate = useNavigate();
@@ -212,15 +212,6 @@ export function Signup() {
                 className="text-indigo-600 hover:text-indigo-700 font-semibold"
               >
                 Sign In
-              </Link>
-            </p>
-            <p className="text-sm text-gray-600">
-              <Link
-                to="/admin/signin"
-                className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center justify-center gap-1"
-              >
-                <FaBus className="text-sm" />
-                Admin Login
               </Link>
             </p>
           </div>
