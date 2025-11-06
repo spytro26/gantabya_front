@@ -284,16 +284,38 @@ export function UserHome() {
                   </div>
                 </div>
                 <p className="text-lg font-semibold mb-2">{offer.description}</p>
-                {offer.minBookingAmount && (
-                  <p className="text-sm opacity-90">
-                    Min booking: ₹{offer.minBookingAmount}
-                  </p>
-                )}
-                {offer.maxDiscount && (
-                  <p className="text-sm opacity-90">
-                    Max discount: ₹{offer.maxDiscount}
-                  </p>
-                )}
+                
+                {/* Show applicability */}
+                <div className="mb-2">
+                  {offer.creatorRole === 'SUPERADMIN' ? (
+                    <p className="text-sm font-medium bg-white/20 rounded px-2 py-1 inline-block">
+                      ✨ Applied on all buses
+                    </p>
+                  ) : offer.creatorRole === 'ADMIN' && offer.busServiceName ? (
+                    <p className="text-sm font-medium bg-white/20 rounded px-2 py-1 inline-block">
+                      🚌 Applied on {offer.busServiceName} buses
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* Min/Max limits */}
+                <div className="space-y-1">
+                  {offer.minBookingAmount && (
+                    <p className="text-sm opacity-90">
+                      💰 Min booking: ₹{offer.minBookingAmount}
+                    </p>
+                  )}
+                  {offer.maxDiscount && (
+                    <p className="text-sm opacity-90">
+                      🎯 Max discount: ₹{offer.maxDiscount}
+                    </p>
+                  )}
+                  {offer.usageLimit && (
+                    <p className="text-sm opacity-90">
+                      ⏰ Limited: {offer.usageLimit - offer.usageCount} uses left
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>

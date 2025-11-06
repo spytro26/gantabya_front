@@ -17,6 +17,12 @@ interface Booking {
   bookingGroupId: string;
   status: string;
   totalPrice: number;
+  discountAmount: number;
+  finalPrice: number;
+  coupon: {
+    code: string;
+    description: string;
+  } | null;
   bookedAt: string;
   trip: {
     tripId: string;
@@ -40,6 +46,16 @@ interface Booking {
       arrivalTime: string | null;
     };
   };
+  boardingPoint: {
+    name: string;
+    landmark: string | null;
+    time: string;
+  } | null;
+  droppingPoint: {
+    name: string;
+    landmark: string | null;
+    time: string;
+  } | null;
   seats: Array<{
     seatNumber: string;
     type: string;
@@ -288,10 +304,17 @@ export function MyBookings() {
                     <div className="flex items-start gap-4">
                       <FaMapMarkerAlt className="text-green-500 mt-1" />
                       <div>
-                        <div className="text-sm text-gray-600">From</div>
-                        <div className="font-semibold">{booking.route.from.city}</div>
+                        <div className="text-sm text-gray-600">Pickup From</div>
+                        <div className="font-semibold">
+                          {booking.route.from.city}
+                          {booking.boardingPoint && (
+                            <span className="text-sm text-gray-600 font-normal">
+                              {' '}({booking.boardingPoint.name})
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-600">
-                          {booking.route.from.departureTime}
+                          {booking.boardingPoint?.time || booking.route.from.departureTime}
                         </div>
                       </div>
                     </div>
@@ -299,10 +322,17 @@ export function MyBookings() {
                     <div className="flex items-start gap-4">
                       <FaMapMarkerAlt className="text-red-500 mt-1" />
                       <div>
-                        <div className="text-sm text-gray-600">To</div>
-                        <div className="font-semibold">{booking.route.to.city}</div>
+                        <div className="text-sm text-gray-600">Drop At</div>
+                        <div className="font-semibold">
+                          {booking.route.to.city}
+                          {booking.droppingPoint && (
+                            <span className="text-sm text-gray-600 font-normal">
+                              {' '}({booking.droppingPoint.name})
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-600">
-                          {booking.route.to.arrivalTime}
+                          {booking.droppingPoint?.time || booking.route.to.arrivalTime}
                         </div>
                       </div>
                     </div>
@@ -335,18 +365,40 @@ export function MyBookings() {
                       <div>
                         <div className="text-sm text-gray-600">Seats</div>
                         <div className="font-semibold">
-                          {booking.seats.map((s) => s.seatNumber).join(', ')}
+                          {booking.seats.map((s) => `${s.seatNumber} (${s.level})`).join(', ')}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3 text-gray-700">
                       <FaRupeeSign className="text-indigo-600 mt-1" />
-                      <div>
-                        <div className="text-sm text-gray-600">Total Amount</div>
-                        <div className="font-bold text-xl text-indigo-600">
-                          {booking.totalPrice}
-                        </div>
+                      <div className="w-full">
+                        {booking.coupon && booking.discountAmount > 0 ? (
+                          <>
+                            <div className="text-sm text-gray-600">Amount Paid</div>
+                            <div className="space-y-1">
+                              {/* Original Price (before discount) - Strikethrough */}
+                              <div className="text-sm text-gray-500 line-through">
+                                Original: {Math.abs(booking.totalPrice).toFixed(2)}
+                              </div>
+                              {/* Final Price (after discount) - Bold */}
+                              <div className="font-bold text-xl text-indigo-600">
+                                {Math.abs(booking.finalPrice).toFixed(2)}
+                              </div>
+                              {/* Discount Amount */}
+                              <div className="text-xs text-green-600 font-medium">
+                                Saved {Math.abs(booking.discountAmount).toFixed(2)} with {booking.coupon.code}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-sm text-gray-600">Total Amount</div>
+                            <div className="font-bold text-xl text-indigo-600">
+                              {Math.abs(booking.finalPrice || booking.totalPrice).toFixed(2)}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

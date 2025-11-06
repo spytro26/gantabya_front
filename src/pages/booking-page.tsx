@@ -335,12 +335,14 @@ export function BookingPage() {
   const getSeatPrice = (seat: Seat): number => {
     if (!busInfo) return 0;
     
+    // Calculate journey price = toStop price - fromStop price
+    // Both prices are cumulative from origin, so difference gives journey price
     if (seat.level === 'LOWER' && seat.type === 'SEATER') {
-      return busInfo.route.fromStop.lowerSeaterPrice;
+      return Math.abs(busInfo.route.toStop.lowerSeaterPrice - busInfo.route.fromStop.lowerSeaterPrice);
     } else if (seat.level === 'LOWER' && seat.type === 'SLEEPER') {
-      return busInfo.route.fromStop.lowerSleeperPrice;
+      return Math.abs(busInfo.route.toStop.lowerSleeperPrice - busInfo.route.fromStop.lowerSleeperPrice);
     } else if (seat.level === 'UPPER' && seat.type === 'SLEEPER') {
-      return busInfo.route.fromStop.upperSleeperPrice;
+      return Math.abs(busInfo.route.toStop.upperSleeperPrice - busInfo.route.fromStop.upperSleeperPrice);
     }
     return 0;
   };
