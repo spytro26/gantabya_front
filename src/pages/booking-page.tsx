@@ -534,7 +534,6 @@ export function BookingPage() {
     if (!busInfo) return null;
 
     // Calculate the actual grid size based on seats present
-    // Find the maximum row and column that contains a seat
     let maxRow = 0;
     let maxColumn = 0;
     
@@ -545,133 +544,89 @@ export function BookingPage() {
       if (seatMaxColumn > maxColumn) maxColumn = seatMaxColumn;
     });
     
-    // Grid dimensions should be maxRow+1 and maxColumn+1 (0-indexed)
-    const actualRows = maxRow + 1;
-    const actualColumns = maxColumn + 1;
-
-    const grid: (Seat | null)[][] = Array(actualRows)
-      .fill(null)
-      .map(() => Array(actualColumns).fill(null));
-
-    seats.forEach((seat) => {
-      for (let r = 0; r < seat.rowSpan; r++) {
-        for (let c = 0; c < seat.columnSpan; c++) {
-          if (seat.row + r < actualRows && seat.column + c < actualColumns) {
-            if (r === 0 && c === 0) {
-              grid[seat.row][seat.column] = seat;
-            } else {
-              grid[seat.row + r][seat.column + c] = { ...seat, seatNumber: '' } as Seat;
-            }
-          }
-        }
-      }
-    });
+    // Grid dimensions (add 1 because 0-indexed)
+    const gridRows = maxRow + 1;
+    const gridColumns = maxColumn + 1;
 
     return (
       <div className="flex justify-center items-center w-full px-2">
         <div className="overflow-x-auto">
           <div className="inline-block">
-            {/* Realistic Bus Layout Container */}
-            <div className="relative">
-              {/* Bus Frame - Big Border */}
-              <div className="border-4 sm:border-6 md:border-8 border-gray-800 rounded-3xl bg-gradient-to-b from-gray-100 to-gray-200 p-3 sm:p-4 md:p-6 shadow-2xl" style={{ minWidth: 'fit-content' }}>
+            {/* Bus Frame */}
+            <div className="border-4 sm:border-6 md:border-8 border-gray-800 rounded-3xl bg-gradient-to-b from-gray-100 to-gray-200 p-3 sm:p-4 md:p-6 shadow-2xl" style={{ minWidth: 'fit-content' }}>
               
               {/* Bus Front Section with Driver */}
               <div className="flex flex-col sm:flex-row justify-between items-center mb-3 sm:mb-4 pb-3 sm:pb-4 border-b-2 sm:border-b-4 border-gray-800 gap-2">
-                {/* Windshield/Front Indicator */}
                 <div className="flex items-center gap-2 bg-blue-100 border-2 border-blue-400 rounded-lg px-2 sm:px-3 md:px-4 py-1 sm:py-2">
                   <div className="text-[0.65rem] sm:text-xs md:text-sm font-bold text-blue-700">← FRONT →</div>
                 </div>
                 
-                {/* Driver Position - Top Right */}
                 <div className="flex items-center gap-1 sm:gap-2 bg-yellow-100 border-2 sm:border-3 border-yellow-500 rounded-xl px-2 sm:px-3 md:px-4 py-2 sm:py-3 shadow-lg">
                   <GiSteeringWheel className="text-yellow-600 text-xl sm:text-2xl md:text-3xl" />
                   <span className="text-xs sm:text-sm md:text-base font-bold text-yellow-700">DRIVER</span>
                 </div>
               </div>
 
-              {/* Seat Grid - Rotated 90° (4 columns wide, up to 15 rows long) */}
-              <div className="flex flex-col gap-1 sm:gap-2">
-                {grid.map((row, rowIndex) => (
-                  <div key={rowIndex} className="flex gap-1 sm:gap-2 justify-center">
-                    {row.map((cell, colIndex) => {
-                      if (!cell) {
-                        return (
-                          <div
-                            key={`${rowIndex}-${colIndex}`}
-                            className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16"
-                          />
-                        );
-                      }
+              {/* ✅ CSS Grid Layout - No white spaces, exact positioning */}
+              <div 
+                className="gap-1 sm:gap-2"
+                style={{
+                  display: 'grid',
+                  gridTemplateRows: `repeat(${gridRows}, minmax(2.5rem, 1fr))`,
+                  gridTemplateColumns: `repeat(${gridColumns}, minmax(2.5rem, 1fr))`,
+                }}
+              >
+                {seats.map((seat) => {
+                  const isSelected = selectedSeats.includes(seat.id);
+                  const isAvailable = seat.isAvailable;
+                  
+                  // Scale bed icon based on span
+                  const getBedIconClass = () => {
+                    if (seat.type !== 'SLEEPER') return 'text-sm sm:text-base md:text-lg lg:text-xl';
+                    
+                    // Vertical sleeper
+                    if (seat.rowSpan === 2) return 'text-base sm:text-lg md:text-xl lg:text-2xl';
+                    
+                    // Horizontal sleeper
+                    if (seat.columnSpan === 2) return 'text-base sm:text-lg md:text-xl lg:text-2xl';
+                    if (seat.columnSpan === 3) return 'text-lg sm:text-xl md:text-2xl lg:text-3xl';
+                    if (seat.columnSpan === 4) return 'text-xl sm:text-2xl md:text-3xl lg:text-4xl';
+                    
+                    return 'text-sm sm:text-base md:text-lg lg:text-xl';
+                  };
 
-                      // Skip rendering placeholder cells for multi-span seats
-                      if (cell.seatNumber === '') {
-                        return null;
-                      }
-
-                      const isSelected = selectedSeats.includes(cell.id);
-                      const isAvailable = cell.isAvailable;
-                      
-                      // Calculate the width based on columnSpan
-                      const getWidthClass = () => {
-                        if (cell.columnSpan === 2) return 'w-[5.25rem] sm:w-[6.25rem] md:w-[7.25rem] lg:w-[8.25rem]';
-                        if (cell.columnSpan === 3) return 'w-[8rem] sm:w-[9.5rem] md:w-[11rem] lg:w-[12.5rem]';
-                        if (cell.columnSpan === 4) return 'w-[10.75rem] sm:w-[12.75rem] md:w-[14.75rem] lg:w-[16.75rem]';
-                        return 'w-10 sm:w-12 md:w-14 lg:w-16';
-                      };
-                      
-                      // Calculate the height based on rowSpan (for vertical sleepers)
-                      const getHeightClass = () => {
-                        if (cell.rowSpan === 2) return 'h-[5.25rem] sm:h-[6.25rem] md:h-[7.25rem] lg:h-[8.25rem]';
-                        return 'h-10 sm:h-12 md:h-14 lg:h-16';
-                      };
-                      
-                      // Scale bed icon based on columnSpan and rowSpan
-                      const getBedIconClass = () => {
-                        if (cell.type !== 'SLEEPER') return 'text-sm sm:text-base md:text-lg lg:text-xl';
-                        
-                        // For vertical sleepers (rowSpan = 2)
-                        if (cell.rowSpan === 2) return 'text-base sm:text-lg md:text-xl lg:text-2xl';
-                        
-                        // For horizontal sleepers (columnSpan > 1)
-                        if (cell.columnSpan === 2) return 'text-base sm:text-lg md:text-xl lg:text-2xl';
-                        if (cell.columnSpan === 3) return 'text-lg sm:text-xl md:text-2xl lg:text-3xl';
-                        if (cell.columnSpan === 4) return 'text-xl sm:text-2xl md:text-3xl lg:text-4xl';
-                        
-                        return 'text-sm sm:text-base md:text-lg lg:text-xl';
-                      };
-
-                      return (
-                        <button
-                          key={`${rowIndex}-${colIndex}`}
-                          onClick={() => handleSeatClick(cell.id, isAvailable)}
-                          disabled={!isAvailable}
-                          className={`
-                            ${getWidthClass()}
-                            ${getHeightClass()}
-                            rounded border-2 font-semibold text-xs
-                            transition-all duration-200
-                            flex flex-col items-center justify-center
-                            ${
-                              isSelected
-                                ? 'bg-green-500 border-green-600 text-white scale-110'
-                                : isAvailable
-                                ? 'bg-white border-gray-300 hover:border-indigo-500 hover:bg-indigo-50'
-                                : 'bg-red-400 border-red-500 text-white cursor-not-allowed'
-                            }
-                          `}
-                        >
-                          {cell.type === 'SLEEPER' ? (
-                            <FaBed className={`${getBedIconClass()} mb-0.5`} />
-                          ) : (
-                            <FaChair className="text-sm sm:text-base md:text-lg lg:text-xl mb-0.5" />
-                          )}
-                          <span className="text-[0.55rem] sm:text-[10px] md:text-xs">{cell.seatNumber}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
+                  return (
+                    <button
+                      key={seat.id}
+                      onClick={() => handleSeatClick(seat.id, isAvailable)}
+                      disabled={!isAvailable}
+                      style={{
+                        gridRow: `${seat.row + 1} / span ${seat.rowSpan}`,
+                        gridColumn: `${seat.column + 1} / span ${seat.columnSpan}`,
+                      }}
+                      className={`
+                        rounded border-2 font-semibold text-xs
+                        transition-all duration-200
+                        flex flex-col items-center justify-center
+                        min-h-[2.5rem] min-w-[2.5rem]
+                        ${
+                          isSelected
+                            ? 'bg-green-500 border-green-600 text-white scale-105 shadow-lg z-10'
+                            : isAvailable
+                            ? 'bg-white border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 hover:shadow-md'
+                            : 'bg-red-400 border-red-500 text-white cursor-not-allowed opacity-75'
+                        }
+                      `}
+                    >
+                      {seat.type === 'SLEEPER' ? (
+                        <FaBed className={`${getBedIconClass()} mb-0.5`} />
+                      ) : (
+                        <FaChair className="text-sm sm:text-base md:text-lg lg:text-xl mb-0.5" />
+                      )}
+                      <span className="text-[0.55rem] sm:text-[10px] md:text-xs font-semibold">{seat.seatNumber}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Bus Back Section */}
@@ -682,7 +637,6 @@ export function BookingPage() {
             </div>
           </div>
         </div>
-      </div>
       </div>
     );
   };
@@ -819,17 +773,6 @@ export function BookingPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Seat Selection */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Bus Images Carousel - Show only if images exist */}
-            {busInfo.bus.images && busInfo.bus.images.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-xl font-bold mb-4">Bus Photos</h3>
-                <BusImageCarousel 
-                  images={busInfo.bus.images} 
-                  busName={busInfo.bus.name}
-                />
-              </div>
-            )}
-
             {/* Seat Selection Grid */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-xl font-bold mb-4">Select Your Seats</h3>
