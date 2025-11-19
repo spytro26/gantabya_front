@@ -16,9 +16,14 @@ import {
   FaChair,
   FaChevronUp,
   FaChevronDown,
+  FaCreditCard,
+  FaMobileAlt,
 } from 'react-icons/fa';
 import { GiSteeringWheel } from 'react-icons/gi';
 import type { BusInfo, Seat } from '../types/booking';
+import { loadRazorpayScript, submitEsewaForm } from '../utils/payment';
+
+type PaymentGateway = 'RAZORPAY' | 'ESEWA';
 
 export function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -49,6 +54,7 @@ export function BookingPage() {
   const [modalStage, setModalStage] = useState<'BOARDING' | 'PASSENGER'>('BOARDING');
   const [currentSeatStep, setCurrentSeatStep] = useState(0);
   const [modalError, setModalError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('RAZORPAY');
   const [selectedBoardingPointId, setSelectedBoardingPointId] = useState(
     routeState?.boardingPointId || ''
   );
@@ -271,7 +277,6 @@ export function BookingPage() {
       return;
     }
 
-    // Validate passenger information
     for (const seatId of selectedSeats) {
       const passenger = passengers[seatId];
       if (!passenger || !passenger.name || !passenger.age || passenger.age < 1) {
@@ -280,17 +285,19 @@ export function BookingPage() {
       }
     }
 
+    setIsConfirmationReady(false);
+    setModalError('');
     setBookingLoading(true);
+
     try {
-      // Format passengers array for API
-      const passengersArray = selectedSeats.map(seatId => ({
+      const passengersArray = selectedSeats.map((seatId) => ({
         seatId,
         name: passengers[seatId].name,
         age: passengers[seatId].age,
         gender: passengers[seatId].gender,
       }));
 
-      await api.post(API_ENDPOINTS.BOOK_TICKET, {
+      const bookingPayload = {
         tripId,
         fromStopId: fromStopId || busInfo?.route.fromStop.id,
         toStopId: toStopId || busInfo?.route.toStop.id,
@@ -299,16 +306,108 @@ export function BookingPage() {
         boardingPointId: selectedBoardingPointId,
         droppingPointId: selectedDroppingPointId,
         couponCode: appliedCoupon?.code || undefined,
+      };
+
+      const initiateResponse = await api.post(API_ENDPOINTS.PAYMENTS_INITIATE, {
+        ...bookingPayload,
+        paymentMethod,
       });
 
-      alert('Booking confirmed successfully!');
-      navigate('/my-bookings');
+      const {
+        paymentId,
+        method,
+        amount,
+        currency,
+        orderId,
+        razorpayKeyId,
+        form,
+      } = initiateResponse.data;
+
+      if (method === 'RAZORPAY') {
+        await loadRazorpayScript();
+        setBookingLoading(false);
+
+        if (!window.Razorpay) {
+          throw new Error('Failed to load Razorpay checkout. Please refresh and try again.');
+        }
+
+        const razorpay = new window.Razorpay({
+          key: razorpayKeyId,
+          amount: Math.round((amount || 0) * 100),
+          currency: currency || 'INR',
+          name: 'Go Gantabya',
+          description: 'Bus ticket booking',
+          order_id: orderId,
+          notes: {
+            tripId: tripId || '',
+            fromStopId: bookingPayload.fromStopId ?? '',
+            toStopId: bookingPayload.toStopId ?? '',
+          },
+          handler: async (response) => {
+            try {
+              setBookingLoading(true);
+              await api.post(API_ENDPOINTS.PAYMENTS_VERIFY, {
+                paymentId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+
+              await api.post(API_ENDPOINTS.PAYMENTS_CONFIRM, {
+                paymentId,
+              });
+
+              alert('Booking confirmed successfully!');
+              navigate('/my-bookings');
+            } catch (verificationError: any) {
+              console.error('Error verifying Razorpay payment:', verificationError);
+              const message =
+                verificationError.response?.data?.errorMessage ||
+                'Payment verification failed. Please contact support if amount was deducted.';
+              setModalError(message);
+              alert(message);
+            } finally {
+              setBookingLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setBookingLoading(false);
+              setModalError('Payment was cancelled before completion.');
+            },
+          },
+          theme: {
+            color: '#4F46E5',
+          },
+        });
+
+        razorpay.on('payment.failed', (failure) => {
+          console.error('Razorpay payment failed:', failure);
+          const message =
+            failure.error?.description || 'Payment failed. Please try again with a different method or card.';
+          setModalError(message);
+          alert(message);
+        });
+
+        razorpay.open();
+        return;
+      }
+
+      if (method === 'ESEWA' && form) {
+        sessionStorage.setItem('latestPaymentId', paymentId);
+        alert('Redirecting to eSewa to complete your payment.');
+        setBookingLoading(false);
+        submitEsewaForm(form.formUrl, form.params);
+        return;
+      }
+
+      throw new Error('Unsupported payment method.');
     } catch (err: any) {
-      alert(
-        err.response?.data?.errorMessage ||
-          'Booking failed. Please try again.'
-      );
-    } finally {
+      console.error('Error initiating payment:', err);
+      const message =
+        err.response?.data?.errorMessage || err.message || 'Payment initiation failed. Please try again.';
+      setModalError(message);
+      alert(message);
       setBookingLoading(false);
     }
   };
@@ -1236,6 +1335,42 @@ export function BookingPage() {
                 </div>
 
                 <div className="space-y-3">
+                  <div>
+                    <span className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Select Payment Method
+                    </span>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('RAZORPAY')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors ${
+                          paymentMethod === 'RAZORPAY'
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                            : 'border-gray-200 hover:border-indigo-300 text-gray-700'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 text-sm sm:text-base font-medium">
+                          <FaCreditCard className="hidden sm:block" /> Razorpay
+                        </span>
+                        <span className="text-xs text-gray-500">Pay in ₹</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('ESEWA')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors ${
+                          paymentMethod === 'ESEWA'
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-gray-200 hover:border-green-300 text-gray-700'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 text-sm sm:text-base font-medium">
+                          <FaMobileAlt className="hidden sm:block" /> eSewa
+                        </span>
+                        <span className="text-xs text-gray-500">Pay in NPR</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Have a coupon?</label>
                     <div className="flex gap-2">

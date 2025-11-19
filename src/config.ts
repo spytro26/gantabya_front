@@ -13,7 +13,9 @@ export const API_ENDPOINTS = {
 
   // User Booking
   SEARCH_BUSES: "/user/showbus",
-  BOOK_TICKET: "/user/bookticket",
+  PAYMENTS_INITIATE: "/user/payments/initiate",
+  PAYMENTS_VERIFY: "/user/payments/verify",
+  PAYMENTS_CONFIRM: "/user/payments/confirm",
   MY_BOOKINGS: "/user/mybookings",
   CANCEL_TICKET: "/user/cancelticket",
 
