@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS, API_BASE_URL } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import {
   FaMapMarkerAlt,
@@ -9,6 +9,7 @@ import {
   FaCalendar,
   FaTimesCircle,
   FaTicketAlt,
+  FaDownload,
 } from 'react-icons/fa';
 
 interface Booking {
@@ -129,6 +130,39 @@ export function MyBookings() {
       alert(
         err.response?.data?.errorMessage ||
           'Failed to cancel booking. Please try again.'
+      );
+    }
+  };
+
+  const handleDownloadTicket = async (bookingGroupId: string) => {
+    try {
+      const response = await api.get(
+        `${API_ENDPOINTS.DOWNLOAD_TICKET}/${bookingGroupId}`,
+        {
+          responseType: 'blob', // Important for downloading binary data
+        }
+      );
+
+      // Create a blob from the PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ticket-${bookingGroupId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(
+        err.response?.data?.errorMessage ||
+          'Failed to download ticket. Please try again.'
       );
     }
   };
@@ -354,7 +388,7 @@ export function MyBookings() {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
+                <div className="border-t border-gray-200 pt-4 flex justify-between items-center flex-wrap gap-3">
                   <div className="text-sm text-gray-500">
                     Booked on{' '}
                     {new Date(booking.bookedAt).toLocaleDateString('en-US', {
@@ -363,15 +397,28 @@ export function MyBookings() {
                       day: 'numeric',
                     })}
                   </div>
-                  {booking.status === 'CONFIRMED' && canCancelBooking(booking) && (
-                    <button
-                      onClick={() => handleCancelBooking(booking.bookingGroupId)}
-                      className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium flex items-center gap-2"
-                    >
-                      <FaTimesCircle />
-                      Cancel Booking
-                    </button>
-                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    {/* Download Ticket Button - Available for CONFIRMED bookings */}
+                    {booking.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => handleDownloadTicket(booking.bookingGroupId)}
+                        className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 font-medium flex items-center gap-2"
+                      >
+                        <FaDownload />
+                        Download Ticket
+                      </button>
+                    )}
+                    {/* Cancel Button - Only for CONFIRMED bookings that can be cancelled */}
+                    {booking.status === 'CONFIRMED' && canCancelBooking(booking) && (
+                      <button
+                        onClick={() => handleCancelBooking(booking.bookingGroupId)}
+                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium flex items-center gap-2"
+                      >
+                        <FaTimesCircle />
+                        Cancel Booking
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
