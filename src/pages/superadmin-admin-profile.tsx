@@ -14,8 +14,7 @@ import {
   FaShieldAlt,
 } from "react-icons/fa";
 import busLogo from "../assets/buslogo.jpg";
-
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../config";
 
 interface Admin {
   id: string;

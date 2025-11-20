@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { FaEnvelope, FaKey, FaShieldAlt } from "react-icons/fa";
-
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../config";
 
 export default function AdminVerifyEmail() {
   const [otp, setOtp] = useState("");

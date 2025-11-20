@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaShieldAlt, FaUser, FaLock } from "react-icons/fa";
-
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../config";
 
 export default function SuperAdminSignin() {
   const [username, setUsername] = useState("");
@@ -37,14 +36,12 @@ export default function SuperAdminSignin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full space-y-6">
-        {/* Shield Icon Badge */}
         <div className="flex justify-center sm:justify-end">
           <div className="bg-red-600 p-3 rounded-full shadow-lg">
             <FaShieldAlt className="text-white text-2xl" />
           </div>
         </div>
 
-        {/* Signin Card */}
         <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 border border-gray-700">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Super Admin</h1>
@@ -58,7 +55,6 @@ export default function SuperAdminSignin() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Input */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Username
@@ -78,7 +74,6 @@ export default function SuperAdminSignin() {
               </div>
             </div>
 
-            {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Password
@@ -98,7 +93,6 @@ export default function SuperAdminSignin() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -114,10 +108,8 @@ export default function SuperAdminSignin() {
               )}
             </button>
           </form>
-
         </div>
 
-        {/* Footer */}
         <div className="text-center">
           <p className="text-gray-600 text-sm">
             Highest level of access • Full system control

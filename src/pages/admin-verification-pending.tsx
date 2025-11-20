@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import busLogo from "../assets/buslogo.jpg";
-
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../config";
 
 export default function AdminVerificationPending() {
   const [loading, setLoading] = useState(true);

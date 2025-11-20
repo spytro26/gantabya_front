@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { API_ENDPOINTS, API_BASE_URL } from '../config';
+// API_BASE_URL
+import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import {
   FaMapMarkerAlt,
