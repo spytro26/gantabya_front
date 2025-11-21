@@ -109,6 +109,14 @@ export function BookingPage() {
       }
     }, [selectedSeats.length]);
 
+    useEffect(() => {
+      const handlePageShow = () => {
+        setBookingLoading(false);
+      };
+      window.addEventListener('pageshow', handlePageShow);
+      return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
+
 
   const fetchUnreadCount = async () => {
     try {
@@ -285,7 +293,6 @@ export function BookingPage() {
       }
     }
 
-    setIsConfirmationReady(false);
     setModalError('');
     setBookingLoading(true);
 
@@ -325,7 +332,7 @@ export function BookingPage() {
 
       if (method === 'RAZORPAY') {
         await loadRazorpayScript();
-        setBookingLoading(false);
+        // Keep bookingLoading true while Razorpay loads
 
         if (!window.Razorpay) {
           throw new Error('Failed to load Razorpay checkout. Please refresh and try again.');
@@ -395,8 +402,7 @@ export function BookingPage() {
 
       if (method === 'ESEWA' && form) {
         sessionStorage.setItem('latestPaymentId', paymentId);
-        alert('Redirecting to eSewa to complete your payment.');
-        setBookingLoading(false);
+        // Keep bookingLoading true until redirection happens
         submitEsewaForm(form.formUrl, form.params);
         return;
       }
@@ -1255,9 +1261,9 @@ export function BookingPage() {
                 </div>
                 <button
                   onClick={handleOpenBookingModal}
-                  disabled={selectedSeats.length === 0}
+                  disabled={selectedSeats.length === 0 || bookingLoading}
                   className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm sm:text-base font-semibold transition-colors ${
-                    selectedSeats.length === 0
+                    selectedSeats.length === 0 || bookingLoading
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow'
                   }`}

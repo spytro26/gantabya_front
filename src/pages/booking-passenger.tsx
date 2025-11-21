@@ -73,6 +73,14 @@ export function BookingPassengerPage() {
     fetchBusInfo(fromStopId, toStopId);
   }, [tripId, selectedSeats.length, fromStopId, toStopId, boardingPointId, droppingPointId]);
 
+  useEffect(() => {
+    const handlePageShow = () => {
+      setBookingLoading(false);
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
   const fetchUnreadCount = async () => {
     try {
       const response = await api.get(API_ENDPOINTS.UNREAD_COUNT);
@@ -253,7 +261,7 @@ export function BookingPassengerPage() {
 
       if (method === 'RAZORPAY') {
         await loadRazorpayScript();
-        setBookingLoading(false);
+        // Do NOT setBookingLoading(false) here, keep it true while Razorpay loads
 
         if (!window.Razorpay) {
           throw new Error('Failed to load Razorpay checkout. Please refresh and try again.');
@@ -273,7 +281,7 @@ export function BookingPassengerPage() {
           },
           handler: async (response) => {
             try {
-              setBookingLoading(true);
+              // Keep loading state true during verification
               await api.post(API_ENDPOINTS.PAYMENTS_VERIFY, {
                 paymentId,
                 razorpayOrderId: response.razorpay_order_id,
@@ -315,6 +323,7 @@ export function BookingPassengerPage() {
             failure.error?.description || 'Payment failed. Please try again with a different method or card.';
           setPaymentError(message);
           alert(message);
+          setBookingLoading(false);
         });
 
         razorpay.open();
@@ -323,8 +332,8 @@ export function BookingPassengerPage() {
 
       if (method === 'ESEWA' && form) {
         sessionStorage.setItem('latestPaymentId', paymentId);
-        alert('Redirecting to eSewa to complete your payment.');
-        setBookingLoading(false);
+        // Removed alert("Redirecting to eSewa...");
+        // Keep bookingLoading true until redirection happens
         submitEsewaForm(form.formUrl, form.params);
         return;
       }
