@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
-import { roundToTwo, formatDualCurrency } from '../utils/currency';
+import { formatDualCurrency } from '../utils/currency';
 import {
   FaMapMarkerAlt,
   FaClock,
