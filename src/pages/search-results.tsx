@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
+import { roundToTwo, formatDualCurrency } from '../utils/currency';
 import {
   FaMapMarkerAlt,
   FaClock,
@@ -390,8 +391,8 @@ export function SearchResults() {
                                 </h3>
                               </div>
                               <div className="hidden lg:flex flex-col items-end gap-2">
-                                <div className="text-2xl font-bold text-indigo-600">
-                                  ₹{bus.price}
+                                <div className="text-xl font-bold text-indigo-600">
+                                  {formatDualCurrency(bus.price)}
                                 </div>
                                 <div className="text-xs text-gray-500">per seat</div>
                                 <button
@@ -477,7 +478,7 @@ export function SearchResults() {
                               </div>
                               <div className="flex items-center gap-3 sm:w-auto w-full justify-between sm:justify-end">
                                 <div className="text-left lg:hidden">
-                                  <div className="text-lg font-bold text-indigo-600">₹{bus.price}</div>
+                                  <div className="text-base font-bold text-indigo-600">{formatDualCurrency(bus.price)}</div>
                                   <div className="text-xs text-gray-500">per seat</div>
                                 </div>
                                 <button

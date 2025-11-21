@@ -61,18 +61,29 @@ interface Booking {
     type: string;
     level: string;
   }>;
+  payment: {
+    method: string;
+    amount: number;
+    currency: string;
+  } | null;
 }
 
 export function MyBookings() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    fetchBookings();
+    setPage(1);
+    setBookings([]);
+    setHasMore(true);
+    fetchBookings(1, true);
     fetchUnreadCount();
   }, [filter]);
 
@@ -85,19 +96,23 @@ export function MyBookings() {
     }
   };
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (pageNum: number, isInitial: boolean = false) => {
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError('');
     try {
-      const queryParam = filter === 'upcoming' ? '?upcoming=true' : '';
-      const response = await api.get(`${API_ENDPOINTS.MY_BOOKINGS}${queryParam}`);
+      const queryParam = filter === 'upcoming' ? '&upcoming=true' : '';
+      const response = await api.get(`${API_ENDPOINTS.MY_BOOKINGS}?page=${pageNum}&limit=5${queryParam}`);
       
-      let allBookings = response.data.bookings || [];
+      let newBookings = response.data.bookings || [];
       
       if (filter === 'past') {
         const now = new Date();
         now.setHours(0, 0, 0, 0); // Normalize to start of day
-        allBookings = allBookings.filter((booking: Booking) => {
+        newBookings = newBookings.filter((booking: Booking) => {
           // ✅ FIX: Parse YYYY-MM-DD string correctly
           const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
           const tripDate = new Date(year, month - 1, day);
@@ -105,7 +120,23 @@ export function MyBookings() {
         });
       }
       
-      setBookings(allBookings);
+      if (isInitial) {
+        setBookings(newBookings);
+      } else {
+        setBookings(prev => [...prev, ...newBookings]);
+      }
+
+      // Check if we have more pages
+      // If we received fewer items than the limit (5), then there are no more items
+      if (newBookings.length < 5) {
+        setHasMore(false);
+      } else {
+        // Also check total pages from response if available, but length check is usually enough for "Load More"
+        if (pageNum >= response.data.totalPages) {
+            setHasMore(false);
+        }
+      }
+
     } catch (err: any) {
       setError(
         err.response?.data?.errorMessage ||
@@ -113,7 +144,14 @@ export function MyBookings() {
       );
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchBookings(nextPage, false);
   };
 
   const handleCancelBooking = async (bookingGroupId: string) => {
@@ -126,7 +164,9 @@ export function MyBookings() {
         bookingGroupId,
       });
       alert('Booking cancelled successfully');
-      fetchBookings();
+      // Reset to first page
+      setPage(1);
+      fetchBookings(1, true);
     } catch (err: any) {
       alert(
         err.response?.data?.errorMessage ||
@@ -356,7 +396,15 @@ export function MyBookings() {
                     </div>
 
                     <div className="flex items-start gap-3 text-gray-700">
-                      <FaRupeeSign className="text-indigo-600 mt-1" />
+                      {/* Show Rupee sign only if INR or default, otherwise show generic or text */}
+                      {(!booking.payment || booking.payment.currency === 'INR') ? (
+                        <div className="flex items-center text-indigo-600 mt-1">
+                          <span className="text-sm font-bold mr-1">INR</span>
+                          <FaRupeeSign />
+                        </div>
+                      ) : (
+                        <span className="text-indigo-600 font-bold mt-1 text-sm">NPR</span>
+                      )}
                       <div className="w-full">
                         {booking.coupon && booking.discountAmount > 0 ? (
                           <>
@@ -364,15 +412,29 @@ export function MyBookings() {
                             <div className="space-y-1">
                               {/* Original Price (before discount) - Strikethrough */}
                               <div className="text-sm text-gray-500 line-through">
-                                Original: {Math.abs(booking.totalPrice).toFixed(2)}
+                                Original: {booking.payment?.currency === 'INR' ? 'INR ' : 'NPR '}
+                                {booking.payment?.currency === 'INR' 
+                                  ? (Math.abs(booking.totalPrice) * 0.625).toFixed(2)
+                                  : Math.abs(booking.totalPrice).toFixed(2)
+                                }
                               </div>
                               {/* Final Price (after discount) - Bold */}
                               <div className="font-bold text-xl text-indigo-600">
-                                {Math.abs(booking.finalPrice).toFixed(2)}
+                                {booking.payment ? (
+                                  booking.payment.currency === 'INR' 
+                                    ? `${Math.abs(booking.payment.amount).toFixed(2)}` 
+                                    : ` ${Math.abs(booking.payment.amount).toFixed(2)}`
+                                ) : (
+                                  Math.abs(booking.finalPrice).toFixed(2)
+                                )}
                               </div>
                               {/* Discount Amount */}
                               <div className="text-xs text-green-600 font-medium">
-                                Saved {Math.abs(booking.discountAmount).toFixed(2)} with {booking.coupon.code}
+                                Saved {booking.payment?.currency === 'INR' ? 'INR ' : 'NPR '}
+                                {booking.payment?.currency === 'INR'
+                                  ? (Math.abs(booking.discountAmount) * 0.625).toFixed(2)
+                                  : Math.abs(booking.discountAmount).toFixed(2)
+                                } with {booking.coupon.code}
                               </div>
                             </div>
                           </>
@@ -380,7 +442,13 @@ export function MyBookings() {
                           <>
                             <div className="text-sm text-gray-600">Total Amount</div>
                             <div className="font-bold text-xl text-indigo-600">
-                              {Math.abs(booking.finalPrice || booking.totalPrice).toFixed(2)}
+                                {booking.payment ? (
+                                  booking.payment.currency === 'INR' 
+                                    ? `${Math.abs(booking.payment.amount).toFixed(2)}` 
+                                    : ` ${Math.abs(booking.payment.amount).toFixed(2)}`
+                                ) : (
+                                  Math.abs(booking.finalPrice || booking.totalPrice).toFixed(2)
+                                )}
                             </div>
                           </>
                         )}
@@ -423,6 +491,25 @@ export function MyBookings() {
                 </div>
               </div>
             ))}
+            
+            {hasMore && (
+              <div className="text-center mt-8 pb-8">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-8 py-3 bg-white border border-indigo-200 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  {loadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                      Loading...
+                    </span>
+                  ) : (
+                    'Load More Bookings'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

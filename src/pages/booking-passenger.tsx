@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
-import { roundToTwo, formatAmount } from '../utils/currency';
+import { roundToTwo, formatAmount, convertToINR, formatDualCurrency } from '../utils/currency';
 import {
   FaArrowLeft,
   FaUser,
@@ -435,9 +435,9 @@ export function BookingPassengerPage() {
                 <FaTicketAlt />
                 Total Fare
               </div>
-              <div className="mt-1 text-lg font-bold text-indigo-600">₹{formatAmount(totalAmount)}</div>
+              <div className="mt-1 text-lg font-bold text-indigo-600">{formatDualCurrency(totalAmount)}</div>
               {appliedCoupon && (
-                <div className="text-xs text-green-600">Saved ₹{formatAmount(discountAmount)}</div>
+                <div className="text-xs text-green-600">Saved {formatDualCurrency(discountAmount)}</div>
               )}
             </div>
           </div>
@@ -487,7 +487,7 @@ export function BookingPassengerPage() {
                   <div className="text-sm font-semibold text-gray-900">
                     Seat {seat.seatNumber} • {seat.level} {seat.type}
                   </div>
-                  <div className="text-sm font-semibold text-indigo-600">₹{formatAmount(getSeatPrice(seat))}</div>
+                  <div className="text-sm font-semibold text-indigo-600">{formatDualCurrency(getSeatPrice(seat))}</div>
                 </div>
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -587,15 +587,15 @@ export function BookingPassengerPage() {
               </div>
               {appliedCoupon && (
                 <div className="mt-2 text-xs text-green-600">
-                  Coupon {appliedCoupon.code} applied! You saved ₹{formatAmount(discountAmount)}.
+                  Coupon {appliedCoupon.code} applied! You saved {formatDualCurrency(discountAmount)}.
                 </div>
               )}
             </div>
             <div className="sm:text-right">
               <div className="text-xs uppercase tracking-wide text-gray-400">Total amount</div>
-              <div className="text-2xl font-bold text-indigo-600">₹{formatAmount(totalAmount)}</div>
+              <div className="text-2xl font-bold text-indigo-600">{formatDualCurrency(totalAmount)}</div>
               {appliedCoupon && (
-                <div className="text-xs text-gray-500">Discount applied: ₹{formatAmount(discountAmount)}</div>
+                <div className="text-xs text-gray-500">Discount applied: {formatDualCurrency(discountAmount)}</div>
               )}
             </div>
           </div>
@@ -617,7 +617,7 @@ export function BookingPassengerPage() {
                   <span className="flex items-center gap-2">
                     <FaCreditCard /> Razorpay
                   </span>
-                  <span className="text-[11px] text-gray-500">Pay in ₹</span>
+                  <span className="text-[11px] text-gray-500">Pay ₹{formatAmount(convertToINR(totalAmount))}</span>
                 </button>
                 <button
                   type="button"
@@ -631,7 +631,7 @@ export function BookingPassengerPage() {
                   <span className="flex items-center gap-2">
                     <FaMobileAlt /> eSewa
                   </span>
-                  <span className="text-[11px] text-gray-500">Pay in NPR</span>
+                  <span className="text-[11px] text-gray-500">Pay NPR {formatAmount(totalAmount)}</span>
                 </button>
               </div>
             </div>

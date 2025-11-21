@@ -8,7 +8,7 @@ import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
-import { roundToTwo, formatAmount } from '../utils/currency';
+import { roundToTwo, formatAmount, convertToINR, formatDualCurrency } from '../utils/currency';
 import {
   FaArrowLeft,
   FaInfoCircle,
@@ -1034,10 +1034,10 @@ export function BookingPage() {
               <div className="text-right">
                 <div className="text-[11px] uppercase tracking-wide text-gray-400">{selectedSeats.length > 0 ? 'Your total' : 'Starts at'}</div>
                 <div className="text-lg font-bold text-indigo-600">
-                  ₹{
+                  {
                     selectedSeats.length > 0
-                      ? formatAmount(totalAmountValue)
-                      : formatAmount(getMinimumSeatPrice())
+                      ? formatDualCurrency(totalAmountValue)
+                      : formatDualCurrency(getMinimumSeatPrice())
                   }
                 </div>
                 {selectedSeats.length > 0 && (
@@ -1089,7 +1089,7 @@ export function BookingPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Seater</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                      <span className="text-sm font-bold text-indigo-700">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.lowerSeaterPrice -
                             busInfo.route.fromStop.lowerSeaterPrice
@@ -1098,7 +1098,7 @@ export function BookingPage() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Lower Sleeper</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                      <span className="text-sm font-bold text-indigo-700">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.lowerSleeperPrice -
                             busInfo.route.fromStop.lowerSleeperPrice
@@ -1107,7 +1107,7 @@ export function BookingPage() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] uppercase tracking-wide text-indigo-500">Upper Sleeper</span>
-                      <span className="text-sm font-bold text-indigo-700">₹{formatAmount(
+                      <span className="text-sm font-bold text-indigo-700">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.upperSleeperPrice -
                             busInfo.route.fromStop.upperSleeperPrice
@@ -1205,7 +1205,7 @@ export function BookingPage() {
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Lower Seater</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.lowerSeaterPrice -
                             busInfo.route.fromStop.lowerSeaterPrice
@@ -1214,7 +1214,7 @@ export function BookingPage() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Lower Sleeper</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.lowerSleeperPrice -
                             busInfo.route.fromStop.lowerSleeperPrice
@@ -1223,7 +1223,7 @@ export function BookingPage() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-gray-600 text-[10px] sm:text-xs">Upper Sleeper</span>
-                      <span className="font-bold text-indigo-700 text-sm sm:text-base">₹{formatAmount(
+                      <span className="font-bold text-indigo-700 text-sm sm:text-base">{formatDualCurrency(
                         Math.abs(
                           busInfo.route.toStop.upperSleeperPrice -
                             busInfo.route.fromStop.upperSleeperPrice
@@ -1330,7 +1330,7 @@ export function BookingPage() {
                   )}
                   <div className="flex justify-between text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
                     <span>Total</span>
-                    <span className="text-indigo-600">₹{formatAmount(totalAmountValue)}</span>
+                    <span className="text-indigo-600">{formatDualCurrency(totalAmountValue)}</span>
                   </div>
                 </div>
 
@@ -1352,7 +1352,7 @@ export function BookingPage() {
                         <span className="flex items-center gap-2 text-sm sm:text-base font-medium">
                           <FaCreditCard className="hidden sm:block" /> Razorpay
                         </span>
-                        <span className="text-xs text-gray-500">Pay in ₹</span>
+                        <span className="text-xs text-gray-500">Pay ₹{formatAmount(convertToINR(totalAmountValue))}</span>
                       </button>
                       <button
                         type="button"
@@ -1366,7 +1366,7 @@ export function BookingPage() {
                         <span className="flex items-center gap-2 text-sm sm:text-base font-medium">
                           <FaMobileAlt className="hidden sm:block" /> eSewa
                         </span>
-                        <span className="text-xs text-gray-500">Pay in NPR</span>
+                        <span className="text-xs text-gray-500">Pay NPR {formatAmount(totalAmountValue)}</span>
                       </button>
                     </div>
                   </div>
