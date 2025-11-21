@@ -26,6 +26,8 @@ import { BookingPassengerPage } from './pages/booking-passenger';
 import { MyBookings } from './pages/my-bookings';
 import { UserProfile } from './pages/user-profile';
 import { Notifications } from './pages/notifications';
+import { EsewaSuccessPage } from './pages/esewa-success';
+import { EsewaFailurePage } from './pages/esewa-failure';
 import SuperAdminSignin from './pages/superadmin-signin';
 import SuperAdminDashboard from './pages/superadmin-dashboard';
 import SuperAdminAdminProfile from './pages/superadmin-admin-profile';
@@ -50,6 +52,8 @@ function App() {
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/payment/esewa/success/:paymentId" element={<EsewaSuccessPage />} />
+        <Route path="/payment/esewa/failure/:paymentId" element={<EsewaFailurePage />} />
         
         {/* Admin Routes */}
         <Route path="/admin/signup" element={<AdminSignup />} />
