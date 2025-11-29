@@ -9,6 +9,21 @@ const superAdminApi = axios.create({
   withCredentials: true,
 });
 
+// Attach Authorization token from localStorage (iOS cookie fallback)
+superAdminApi.interceptors.request.use(
+  (config) => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        config.headers = config.headers || {};
+        (config.headers as any)["Authorization"] = `Bearer ${token}`;
+      }
+    } catch {}
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 superAdminApi.interceptors.response.use(
   (response) => response,
   (error) => {

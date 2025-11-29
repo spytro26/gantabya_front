@@ -21,6 +21,9 @@ export function AdminSignin() {
 
     try {
       const response = await api.post(API_ENDPOINTS.ADMIN_SIGNIN, formData);
+      if (response.data?.token) {
+        try { localStorage.setItem("auth_token", response.data.token); } catch {}
+      }
       
       // Check if admin is verified
       if (response.data.admin && !response.data.admin.adminVerified) {

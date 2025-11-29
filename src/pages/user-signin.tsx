@@ -20,7 +20,11 @@ export function Signin() {
     setError('');
 
     try {
-      await api.post(API_ENDPOINTS.USER_SIGNIN, formData);
+      const resp = await api.post(API_ENDPOINTS.USER_SIGNIN, formData);
+      // Save token for iOS Safari fallback
+      if (resp.data?.token) {
+        try { localStorage.setItem("auth_token", resp.data.token); } catch {}
+      }
       navigate('/home');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Signin failed');
