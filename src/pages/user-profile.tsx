@@ -83,9 +83,12 @@ export function UserProfile() {
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
-      // Clear cookies by making a logout request if endpoint exists
-      // For now, just navigate to signin
+      // Clear token from localStorage
+      localStorage.removeItem('authToken');
+      
+      // Clear cookies
       document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      
       navigate('/signin');
     }
   };

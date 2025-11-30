@@ -23,6 +23,11 @@ export default function SuperAdminSignin() {
         { withCredentials: true }
       );
 
+      // Store token in localStorage for iOS/mobile compatibility
+      if (response.data.token) {
+        localStorage.setItem('superAdminToken', response.data.token);
+      }
+
       if (response.status === 200) {
         navigate("/superadmin/dashboard");
       }

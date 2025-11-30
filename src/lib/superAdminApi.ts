@@ -9,25 +9,31 @@ const superAdminApi = axios.create({
   withCredentials: true,
 });
 
-// Attach Authorization token from localStorage (iOS cookie fallback)
+// Request interceptor - Add Authorization header if token exists in localStorage
 superAdminApi.interceptors.request.use(
   (config) => {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        config.headers = config.headers || {};
-        (config.headers as any)["Authorization"] = `Bearer ${token}`;
-      }
-    } catch {}
+    // Get token from localStorage (iOS/mobile fallback)
+    const token = localStorage.getItem("superAdminToken");
+
+    // Add token to Authorization header if it exists
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
+// Response interceptor
 superAdminApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear stored token on 401
+      localStorage.removeItem("superAdminToken");
       window.location.href = "/superadmin";
     }
     return Promise.reject(error);

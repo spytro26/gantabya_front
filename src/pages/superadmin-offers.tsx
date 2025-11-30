@@ -23,6 +23,7 @@ function SuperAdminLayout({ children }: PropsWithChildren) {
     } catch (error) {
       console.error("Failed to logout super admin", error);
     } finally {
+      localStorage.removeItem('superAdminToken');
       setMenuOpen(false);
       navigate("/superadmin");
     }

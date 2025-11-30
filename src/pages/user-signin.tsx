@@ -20,14 +20,16 @@ export function Signin() {
     setError('');
 
     try {
-      const resp = await api.post(API_ENDPOINTS.USER_SIGNIN, formData);
-      // Save token for iOS Safari fallback
-      if (resp.data?.token) {
-        try { localStorage.setItem("auth_token", resp.data.token); } catch {}
+      const response = await api.post(API_ENDPOINTS.USER_SIGNIN, formData);
+      
+      // Store token in localStorage for iOS/mobile compatibility
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
       }
+      
       navigate('/home');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Signin failed');
+      setError(err.response?.data?.errorMessage || err.response?.data?.message || 'Signin failed');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import superAdminApi from "../lib/superAdminApi";
+import axios from "axios";
 import {
   FaShieldAlt,
   FaCheckCircle,
@@ -38,7 +38,9 @@ export default function SuperAdminDashboard() {
 
   const fetchAdmins = async () => {
     try {
-      const response = await superAdminApi.get(`/superadmin/admins`);
+      const response = await axios.get(`${API_BASE_URL}/superadmin/admins`, {
+        withCredentials: true,
+      });
       setAdmins(response.data.admins);
     } catch (err: any) {
       if (err.response?.status === 401) {
@@ -54,7 +56,11 @@ export default function SuperAdminDashboard() {
   const handleVerifyAdmin = async (adminId: string) => {
     setActionLoading(adminId);
     try {
-      await superAdminApi.post(`/superadmin/verify-admin/${adminId}`, {});
+      await axios.post(
+        `${API_BASE_URL}/superadmin/verify-admin/${adminId}`,
+        {},
+        { withCredentials: true }
+      );
       fetchAdmins(); // Refresh list
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || "Failed to verify admin");
@@ -69,7 +75,11 @@ export default function SuperAdminDashboard() {
     }
     setActionLoading(adminId);
     try {
-      await superAdminApi.post(`/superadmin/revoke-admin/${adminId}`, {});
+      await axios.post(
+        `${API_BASE_URL}/superadmin/revoke-admin/${adminId}`,
+        {},
+        { withCredentials: true }
+      );
       fetchAdmins(); // Refresh list
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || "Failed to revoke admin");
@@ -80,10 +90,16 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await superAdminApi.post(`/superadmin/logout`, {});
+      await axios.post(
+        `${API_BASE_URL}/superadmin/logout`,
+        {},
+        { withCredentials: true }
+      );
+      localStorage.removeItem('superAdminToken');
       navigate("/superadmin");
     } catch (err) {
       console.error("Logout error:", err);
+      localStorage.removeItem('superAdminToken');
     }
   };
 

@@ -10,17 +10,17 @@ export const api = axios.create({
   withCredentials: true, // Important for cookies
 });
 
-// Request interceptor
+// Request interceptor - Add Authorization header if token exists in localStorage
 api.interceptors.request.use(
   (config) => {
-    // iOS Safari may block third-party cookies; use token fallback if present
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        config.headers = config.headers || {};
-        (config.headers as any)["Authorization"] = `Bearer ${token}`;
-      }
-    } catch {}
+    // Get token from localStorage (iOS/mobile fallback)
+    const token = localStorage.getItem("authToken");
+
+    // Add token to Authorization header if it exists
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => {
@@ -35,11 +35,11 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
+      // Clear stored token on 401
+      localStorage.removeItem("authToken");
+
       // Redirect to signin on unauthorized
       const isAdmin = window.location.pathname.startsWith("/admin");
-      try {
-        localStorage.removeItem("auth_token");
-      } catch {}
       window.location.href = isAdmin ? "/admin/signin" : "/signin";
     }
     return Promise.reject(error);
