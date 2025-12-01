@@ -68,7 +68,9 @@ const AdminSignup: React.FC = () => {
         navigate('/admin/verify-email', { state: { email: formData.email } });
       }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.errorMessage || 'Signup failed');
+      console.error("Admin signup error:", err);
+      const errorMessage = err.response?.data?.errorMessage || err.response?.data?.details || 'Signup failed';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
