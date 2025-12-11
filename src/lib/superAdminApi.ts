@@ -15,9 +15,20 @@ superAdminApi.interceptors.request.use(
     // Get token from localStorage (iOS/mobile fallback)
     const token = localStorage.getItem("superAdminToken");
 
+    // DEBUG: Log what we're sending
+    console.log("🔐 SuperAdmin API Request:", {
+      url: config.url,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : "NO TOKEN",
+    });
+
     // Add token to Authorization header if it exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("✅ Authorization header added");
+    } else {
+      console.log("❌ No token found in localStorage - key: 'superAdminToken'");
+      console.log("📦 All localStorage keys:", Object.keys(localStorage));
     }
 
     return config;

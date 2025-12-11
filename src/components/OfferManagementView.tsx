@@ -176,23 +176,34 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
 
   const Layout = LayoutComponent;
 
+  // Different color schemes for admin vs superadmin
+  const isDarkTheme = role === 'SUPERADMIN';
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center space-x-3">
-              <FaTags className="text-yellow-600" />
+            <h1 className={`text-3xl font-bold flex items-center space-x-3 ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>
+              <FaTags className={isDarkTheme ? 'text-red-500' : 'text-yellow-600'} />
               <span>{title}</span>
             </h1>
-            <p className="text-gray-600 mt-1">{subtitle}</p>
-            <p className="mt-2 text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 max-w-3xl">
+            <p className={`mt-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>{subtitle}</p>
+            <p className={`mt-2 text-sm rounded-lg px-3 py-2 max-w-3xl ${
+              isDarkTheme 
+                ? 'text-purple-100 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border border-purple-500/50' 
+                : 'text-gray-500 bg-yellow-50 border border-yellow-200'
+            }`}>
               {scopeNote}
             </p>
           </div>
           <button
             onClick={() => setShowForm((prev) => !prev)}
-            className="w-full sm:w-auto px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition flex items-center justify-center space-x-2"
+            className={`w-full sm:w-auto px-6 py-3 text-white rounded-lg transition flex items-center justify-center space-x-2 ${
+              isDarkTheme 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'bg-yellow-500 hover:bg-yellow-600'
+            }`}
           >
             <FaPlus />
             <span>{showForm ? 'Cancel' : 'Create Offer'}</span>
@@ -200,23 +211,23 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+          <div className={`px-4 py-3 rounded-lg ${isDarkTheme ? 'bg-red-900/50 border border-red-500 text-red-200' : 'bg-red-100 border border-red-400 text-red-700'}`}>
             {error}
           </div>
         )}
         {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+          <div className={`px-4 py-3 rounded-lg ${isDarkTheme ? 'bg-green-900/50 border border-green-500 text-green-200' : 'bg-green-100 border border-green-400 text-green-700'}`}>
             {success}
           </div>
         )}
 
         {showForm && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Create New Offer</h2>
+          <div className={`rounded-xl shadow-md p-6 ${isDarkTheme ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>Create New Offer</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Coupon Code <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -224,21 +235,21 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                     name="code"
                     value={formData.code}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 uppercase"
+                    className={`w-full px-3 py-2 rounded-lg uppercase ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     placeholder="SAVE50"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Discount Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="discountType"
                     value={formData.discountType}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                   >
                     <option value="PERCENTAGE">Percentage (%)</option>
                     <option value="FIXED_AMOUNT">Fixed Amount (₹)</option>
@@ -246,7 +257,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Discount Value <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -254,7 +265,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                     name="discountValue"
                     value={formData.discountValue}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     placeholder="10"
                     min="0"
                     step="0.01"
@@ -263,13 +274,13 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Discount (₹)</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>Max Discount (₹)</label>
                   <input
                     type="number"
                     name="maxDiscount"
                     value={formData.maxDiscount}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     placeholder="Leave empty for no limit"
                     min="0"
                     step="0.01"
@@ -277,7 +288,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Valid From <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -285,13 +296,13 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                     name="validFrom"
                     value={formData.validFrom}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Valid Until <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -299,19 +310,19 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                     name="validUntil"
                     value={formData.validUntil}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Booking Amount (₹)</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>Min Booking Amount (₹)</label>
                   <input
                     type="number"
                     name="minBookingAmount"
                     value={formData.minBookingAmount}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     placeholder="Leave empty for no minimum"
                     min="0"
                     step="0.01"
@@ -319,13 +330,13 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Usage Limit</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>Usage Limit</label>
                   <input
                     type="number"
                     name="usageLimit"
                     value={formData.usageLimit}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                     placeholder="Leave empty for unlimited"
                     min="1"
                   />
@@ -333,14 +344,14 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                   Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                  className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
                   rows={3}
                   placeholder="Offer description"
                   required
@@ -350,7 +361,7 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50"
+                className={`w-full py-3 text-white rounded-lg transition disabled:opacity-50 ${isDarkTheme ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}
               >
                 {loading ? 'Creating...' : 'Create Offer'}
               </button>
@@ -358,47 +369,47 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className={`rounded-xl shadow-md p-6 ${isDarkTheme ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Active Offers</h2>
-            {fetching && <span className="text-sm text-gray-500">Refreshing...</span>}
+            <h2 className={`text-xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>Active Offers</h2>
+            {fetching && <span className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'}`}>Refreshing...</span>}
           </div>
           {offers.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No offers created yet</p>
+            <p className={`text-center py-8 ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'}`}>No offers created yet</p>
           ) : (
             <div className="space-y-3">
               {offers.map((offer) => (
                 <div
                   key={offer.id}
                   className={`p-4 border-2 rounded-lg ${
-                    offer.isActive
-                      ? 'border-green-300 bg-green-50'
-                      : 'border-gray-300 bg-gray-50'
+                    isDarkTheme
+                      ? (offer.isActive ? 'border-green-600 bg-green-900/30' : 'border-gray-600 bg-gray-700/50')
+                      : (offer.isActive ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50')
                   }`}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center flex-wrap gap-3 mb-2">
-                        <span className="px-3 py-1 bg-yellow-500 text-white font-bold rounded-lg">
+                        <span className={`px-3 py-1 font-bold rounded-lg ${isDarkTheme ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white'}`}>
                           {offer.code}
                         </span>
                         <span
                           className={`px-2 py-1 text-xs font-semibold rounded ${
-                            offer.isActive
-                              ? 'bg-green-200 text-green-800'
-                              : 'bg-gray-300 text-gray-700'
+                            isDarkTheme
+                              ? (offer.isActive ? 'bg-green-700 text-green-200' : 'bg-gray-600 text-gray-300')
+                              : (offer.isActive ? 'bg-green-200 text-green-800' : 'bg-gray-300 text-gray-700')
                           }`}
                         >
                           {offer.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                         {offer.creatorRole && (
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-indigo-100 text-indigo-700">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded ${isDarkTheme ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
                             {offer.creatorRole}
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-700 mb-2">{offer.description}</p>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <p className={`mb-2 ${isDarkTheme ? 'text-gray-200' : 'text-gray-700'}`}>{offer.description}</p>
+                      <div className={`text-sm space-y-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
                         <p>
                           <strong>Discount:</strong>{' '}
                           {offer.discountType === 'PERCENTAGE'

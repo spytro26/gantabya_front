@@ -23,15 +23,27 @@ export default function SuperAdminSignin() {
         { withCredentials: true }
       );
 
+      // DEBUG: Log response
+      console.log("🔐 SuperAdmin Signin Response:", {
+        hasToken: !!response.data.token,
+        tokenPreview: response.data.token ? `${response.data.token.substring(0, 30)}...` : "NO TOKEN IN RESPONSE",
+        responseData: response.data,
+      });
+
       // Store token in localStorage for iOS/mobile compatibility
       if (response.data.token) {
         localStorage.setItem('superAdminToken', response.data.token);
+        console.log("✅ Token stored in localStorage");
+        console.log("📦 Verify storage:", localStorage.getItem('superAdminToken') ? "SUCCESS" : "FAILED");
+      } else {
+        console.log("❌ No token in response to store!");
       }
 
       if (response.status === 200) {
         navigate("/superadmin/dashboard");
       }
     } catch (err: any) {
+      console.error("❌ Signin error:", err);
       setError(err.response?.data?.errorMessage || "Invalid credentials");
     } finally {
       setLoading(false);
