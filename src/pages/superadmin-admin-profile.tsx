@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import superAdminApi from "../lib/superAdminApi";
 import {
   FaArrowLeft,
   FaUser,
@@ -14,7 +14,6 @@ import {
   FaShieldAlt,
 } from "react-icons/fa";
 import busLogo from "../assets/buslogo.jpg";
-import { API_BASE_URL } from "../config";
 
 interface Admin {
   id: string;
@@ -88,23 +87,20 @@ export default function SuperAdminAdminProfile() {
   const fetchAdminProfile = async () => {
     try {
       // Fetch admin details
-      const adminResponse = await axios.get(
-        `${API_BASE_URL}/superadmin/admin/${adminId}`,
-        { withCredentials: true }
+      const adminResponse = await superAdminApi.get(
+        `/superadmin/admin/${adminId}`
       );
       setAdmin(adminResponse.data.admin);
 
       // Fetch admin's buses
-      const busesResponse = await axios.get(
-        `${API_BASE_URL}/superadmin/admin/${adminId}/buses`,
-        { withCredentials: true }
+      const busesResponse = await superAdminApi.get(
+        `/superadmin/admin/${adminId}/buses`
       );
       setBuses(busesResponse.data.buses);
 
       // Fetch admin's trips
-      const tripsResponse = await axios.get(
-        `${API_BASE_URL}/superadmin/admin/${adminId}/trips`,
-        { withCredentials: true }
+      const tripsResponse = await superAdminApi.get(
+        `/superadmin/admin/${adminId}/trips`
       );
       setTrips(tripsResponse.data.trips);
     } catch (err: any) {
