@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import superAdminApi from "../lib/superAdminApi";
 import {
   FaShieldAlt,
   FaCheckCircle,
@@ -13,7 +13,6 @@ import {
   FaEye,
   FaTags,
 } from "react-icons/fa";
-import { API_BASE_URL } from "../config";
 
 interface Admin {
   id: string;
@@ -38,9 +37,7 @@ export default function SuperAdminDashboard() {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/superadmin/admins`, {
-        withCredentials: true,
-      });
+      const response = await superAdminApi.get("/superadmin/admins");
       setAdmins(response.data.admins);
     } catch (err: any) {
       if (err.response?.status === 401) {
@@ -56,11 +53,7 @@ export default function SuperAdminDashboard() {
   const handleVerifyAdmin = async (adminId: string) => {
     setActionLoading(adminId);
     try {
-      await axios.post(
-        `${API_BASE_URL}/superadmin/verify-admin/${adminId}`,
-        {},
-        { withCredentials: true }
-      );
+      await superAdminApi.post(`/superadmin/verify-admin/${adminId}`, {});
       fetchAdmins(); // Refresh list
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || "Failed to verify admin");
@@ -75,11 +68,7 @@ export default function SuperAdminDashboard() {
     }
     setActionLoading(adminId);
     try {
-      await axios.post(
-        `${API_BASE_URL}/superadmin/revoke-admin/${adminId}`,
-        {},
-        { withCredentials: true }
-      );
+      await superAdminApi.post(`/superadmin/revoke-admin/${adminId}`, {});
       fetchAdmins(); // Refresh list
     } catch (err: any) {
       alert(err.response?.data?.errorMessage || "Failed to revoke admin");
@@ -90,11 +79,7 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await axios.post(
-        `${API_BASE_URL}/superadmin/logout`,
-        {},
-        { withCredentials: true }
-      );
+      await superAdminApi.post("/superadmin/logout", {});
       localStorage.removeItem('superAdminToken');
       navigate("/superadmin");
     } catch (err) {
