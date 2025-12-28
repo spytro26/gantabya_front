@@ -150,7 +150,7 @@ const AdminBookingsReport: React.FC = () => {
     return `${dual.ad} (${dual.bs})`;
   };
 
-  const formatDateShort = (dateString: string) => {
+  const _formatDateShort = (dateString: string) => {
     const dual = getDualDateDisplay(dateString);
     return dual.ad;
   };
