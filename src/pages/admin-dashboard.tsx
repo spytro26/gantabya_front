@@ -13,6 +13,7 @@ import {
 import AdminLayout from '../components/AdminLayout';
 import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
+import { getDualDate } from '../utils/nepaliDateConverter';
 
 interface DashboardData {
   serviceProfile: {
@@ -402,7 +403,7 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{booking.bus}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{booking.route}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
-                        {new Date(booking.tripDate).toLocaleDateString('en-IN')}
+                        {getDualDate(booking.tripDate)}
                       </td>
                       <td className="px-4 py-3 text-gray-700 font-semibold">
                         ₹{booking.amount.toLocaleString('en-IN')}

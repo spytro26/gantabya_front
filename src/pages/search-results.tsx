@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
 import { BusImageCarousel } from '../components/BusImageCarousel';
 import { formatDualCurrency } from '../utils/currency';
+import { getDualDate } from '../utils/nepaliDateConverter';
 import {
   FaMapMarkerAlt,
   FaClock,
@@ -282,16 +283,7 @@ export function SearchResults() {
               <div className="flex items-center gap-2">
                 <FaClock />
                 <span>
-                  {(() => {
-                    // ✅ FIX: Parse YYYY-MM-DD string correctly
-                    const [year, month, day] = searchParams?.date.split('-').map(Number);
-                    const date = new Date(year, month - 1, day);
-                    return date.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    });
-                  })()}
+                  {getDualDate(searchParams?.date || '')}
                 </span>
               </div>
             </div>

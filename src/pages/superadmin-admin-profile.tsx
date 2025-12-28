@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import superAdminApi from "../lib/superAdminApi";
+import { getDualDate } from "../utils/nepaliDateConverter";
 import {
   FaArrowLeft,
   FaUser,
@@ -196,7 +197,7 @@ export default function SuperAdminAdminProfile() {
                   </div>
                   <div className="flex items-center space-x-2 text-gray-300">
                     <FaCalendarAlt className="text-gray-500" />
-                    <span>Joined: {new Date(admin.createdAt).toLocaleDateString()}</span>
+                    <span>Joined: {getDualDate(admin.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -216,7 +217,7 @@ export default function SuperAdminAdminProfile() {
               </div>
               {admin.adminVerificationAt && (
                 <p className="text-xs text-gray-400">
-                  Verified on: {new Date(admin.adminVerificationAt).toLocaleDateString()}
+                  Verified on: {getDualDate(admin.adminVerificationAt)}
                 </p>
               )}
             </div>
@@ -345,7 +346,7 @@ export default function SuperAdminAdminProfile() {
                     </div>
                     <div className="bg-gray-700 rounded-lg p-4">
                       <p className="text-gray-400 text-sm">Account Created</p>
-                      <p className="text-white">{new Date(admin.createdAt).toLocaleString()}</p>
+                      <p className="text-white">{getDualDate(admin.createdAt)}</p>
                     </div>
                   </div>
                 </div>
@@ -499,7 +500,7 @@ export default function SuperAdminAdminProfile() {
                               {trip.bus.busNumber} - {trip.bus.name}
                             </h4>
                             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
-                              <span>Date: {new Date(trip.tripDate).toLocaleDateString()}</span>
+                              <span>Date: {getDualDate(trip.tripDate)}</span>
                               <span>Bookings: {trip._count.bookings}</span>
                             </div>
                           </div>

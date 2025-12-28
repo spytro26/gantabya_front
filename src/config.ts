@@ -1,5 +1,6 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000";
 // jljl
 export const API_ENDPOINTS = {
   // User Auth
@@ -49,6 +50,9 @@ export const API_ENDPOINTS = {
   ADMIN_CREATE_TRIP: "/admin/createtrip",
   ADMIN_GET_TRIPS: "/admin/trips",
   ADMIN_CANCEL_TRIP: "/admin/canceltrip",
+
+  // Admin Bookings Report
+  ADMIN_BOOKINGS_DATE_REPORT: "/admin/bookings/date-report",
 
   // Admin Offers
   ADMIN_CREATE_OFFER: "/admin/offers",

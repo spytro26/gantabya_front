@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import superAdminApi from "../lib/superAdminApi";
+import { getDualDate } from "../utils/nepaliDateConverter";
 import {
   FaShieldAlt,
   FaCheckCircle,
@@ -205,7 +206,7 @@ export default function SuperAdminDashboard() {
                       </div>
                       <p className="text-gray-400 text-sm mb-1">{admin.email}</p>
                       <p className="text-gray-500 text-xs">
-                        Registered: {new Date(admin.createdAt).toLocaleDateString()}
+                        Registered: {getDualDate(admin.createdAt)}
                       </p>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row md:items-center">
@@ -265,9 +266,9 @@ export default function SuperAdminDashboard() {
                       </div>
                       <p className="text-gray-400 text-sm mb-1">{admin.email}</p>
                       <div className="flex space-x-4 text-xs text-gray-500">
-                        <p>Registered: {new Date(admin.createdAt).toLocaleDateString()}</p>
+                        <p>Registered: {getDualDate(admin.createdAt)}</p>
                         {admin.adminVerificationAt && (
-                          <p>Verified: {new Date(admin.adminVerificationAt).toLocaleDateString()}</p>
+                          <p>Verified: {getDualDate(admin.adminVerificationAt)}</p>
                         )}
                       </div>
                     </div>

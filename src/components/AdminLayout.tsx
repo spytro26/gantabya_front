@@ -11,6 +11,7 @@ import {
   FaBars,
   FaTimes,
   FaShieldAlt,
+  FaClipboardList,
 } from 'react-icons/fa';
 import buslogo from '../assets/buslogo.jpg';
 import { APP_NAME, API_ENDPOINTS } from '../config';
@@ -98,6 +99,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       name: 'Trip Management',
       path: '/admin/trips',
       icon: <FaCalendarAlt />,
+    },
+    {
+      name: 'Booking Report',
+      path: '/admin/bookings-report',
+      icon: <FaClipboardList />,
     },
     {
       name: 'Offers & Coupons',

@@ -4,6 +4,7 @@ import api from '../lib/api';
 // API_BASE_URL
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
+import { getDualDateDisplay } from '../utils/nepaliDateConverter';
 import {
   FaMapMarkerAlt,
   FaRupeeSign,
@@ -371,15 +372,13 @@ export function MyBookings() {
                         <div className="text-sm text-gray-600">Journey Date</div>
                         <div className="font-semibold">
                           {(() => {
-                            // ✅ FIX: Parse YYYY-MM-DD string correctly
-                            const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
-                            const date = new Date(year, month - 1, day);
-                            return date.toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            });
+                            const dual = getDualDateDisplay(booking.trip.tripDate);
+                            return (
+                              <>
+                                <span>{dual.ad}</span>
+                                <span className="text-sm text-gray-500 ml-2">({dual.bs})</span>
+                              </>
+                            );
                           })()}
                         </div>
                       </div>
@@ -460,11 +459,8 @@ export function MyBookings() {
                 <div className="border-t border-gray-200 pt-4 flex justify-between items-center flex-wrap gap-3">
                   <div className="text-sm text-gray-500">
                     Booked on{' '}
-                    {new Date(booking.bookedAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {getDualDateDisplay(booking.bookedAt).ad}
+                    <span className="text-xs ml-1">({getDualDateDisplay(booking.bookedAt).bs})</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {/* Download Ticket Button - Available for CONFIRMED bookings */}

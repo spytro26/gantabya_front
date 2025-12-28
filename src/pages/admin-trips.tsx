@@ -3,6 +3,7 @@ import { FaCalendarAlt, FaInfoCircle, FaCalendarTimes, FaArrowRight, FaBus } fro
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import api from '../lib/api';
+import { getDualDate } from '../utils/nepaliDateConverter';
 
 interface Bus {
   id: string;
@@ -144,11 +145,11 @@ const TripManagement: React.FC = () => {
                   >
                     <div>
                       <p className="font-semibold text-gray-800">
+                        {getDualDate(trip.tripDate)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
                         {new Date(trip.tripDate).toLocaleDateString('en-IN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
+                          weekday: 'long'
                         })}
                       </p>
                       <p className="text-sm text-gray-600">

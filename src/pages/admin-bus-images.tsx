@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import AdminLayout from '../components/AdminLayout';
 import api from '../lib/api';
+import { getDualDate } from '../utils/nepaliDateConverter';
 
 interface BusImage {
   id: string;
@@ -381,11 +382,7 @@ const AdminBusImages: React.FC = () => {
                   {/* Upload Date */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
                     <p className="text-xs text-white">
-                      {new Date(image.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {getDualDate(image.createdAt)}
                     </p>
                   </div>
                 </div>

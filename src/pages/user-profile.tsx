@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
+import { getDualDate } from '../utils/nepaliDateConverter';
 import {
   FaEnvelope,
   FaEdit,
@@ -232,11 +233,7 @@ export function UserProfile() {
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Member Since</div>
                     <div className="text-lg font-semibold text-gray-900">
-                      {new Date(user.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {getDualDate(user.createdAt)}
                     </div>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ import AmenityManagement from './pages/admin-amenities';
 import AdminVerifyEmail from './pages/admin-verify-email';
 import AdminVerificationPending from './pages/admin-verification-pending';
 import AdminForgotPassword from './pages/admin-forgot-password';
+import AdminBookingsReport from './pages/admin-bookings-report';
 import { UserHome } from './pages/user-home';
 import { SearchResults } from './pages/search-results';
 import { BookingPage } from './pages/booking-page';
@@ -72,6 +73,7 @@ function App() {
         <Route path="/admin/holidays" element={<HolidayManagement />} />
         <Route path="/admin/offers" element={<OfferManagement />} />
         <Route path="/admin/amenities" element={<AmenityManagement />} />
+        <Route path="/admin/bookings-report" element={<AdminBookingsReport />} />
 
         {/* Super Admin Routes */}
         <Route path="/superadmin" element={<SuperAdminSignin />} />

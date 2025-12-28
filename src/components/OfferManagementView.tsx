@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaPlus, FaTags, FaTrash } from 'react-icons/fa';
 import type { AxiosInstance } from 'axios';
+import DualDatePicker from './DualDatePicker';
+import { getDualDateDisplay } from '../utils/nepaliDateConverter';
 
 interface Offer {
   id: string;
@@ -291,13 +293,10 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                   <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Valid From <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    name="validFrom"
+                  <DualDatePicker
                     value={formData.validFrom}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
-                    required
+                    onChange={(date) => setFormData((prev) => ({ ...prev, validFrom: date }))}
+                    className={isDarkTheme ? 'dark' : ''}
                   />
                 </div>
 
@@ -305,13 +304,10 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                   <label className={`block text-sm font-medium mb-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
                     Valid Until <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    name="validUntil"
+                  <DualDatePicker
                     value={formData.validUntil}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 rounded-lg ${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white focus:ring-red-500' : 'border-gray-300 focus:ring-yellow-500'} border focus:ring-2`}
-                    required
+                    onChange={(date) => setFormData((prev) => ({ ...prev, validUntil: date }))}
+                    className={isDarkTheme ? 'dark' : ''}
                   />
                 </div>
 
@@ -419,8 +415,11 @@ export const OfferManagementView: React.FC<OfferManagementViewProps> = ({
                         </p>
                         <p>
                           <strong>Valid:</strong>{' '}
-                          {new Date(offer.validFrom).toLocaleDateString()} to{' '}
-                          {new Date(offer.validUntil).toLocaleDateString()}
+                          {getDualDateDisplay(offer.validFrom).ad} to{' '}
+                          {getDualDateDisplay(offer.validUntil).ad}
+                        </p>
+                        <p className="text-xs opacity-75">
+                          ({getDualDateDisplay(offer.validFrom).bs} - {getDualDateDisplay(offer.validUntil).bs})
                         </p>
                         <p>
                           <strong>Usage:</strong> {offer.usageCount} /{' '}

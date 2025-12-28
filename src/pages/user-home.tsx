@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { API_ENDPOINTS, APP_NAME } from '../config';
 import { UserNavbar } from '../components/UserNavbar';
+import DualDatePicker from '../components/DualDatePicker';
+import { getDualDate } from '../utils/nepaliDateConverter';
 import {
   FaBus,
-  FaCalendar,
   FaMapMarkerAlt,
   FaSearch,
   FaWifi,
@@ -211,19 +212,14 @@ export function UserHome() {
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Journey Date
                   </label>
-                  <div className="relative">
-                    <FaCalendar className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base" />
-                    <input
-                      type="date"
-                      required
-                      min={minDate}
-                      value={searchForm.date}
-                      onChange={(e) =>
-                        setSearchForm({ ...searchForm, date: e.target.value })
-                      }
-                      className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
-                    />
-                  </div>
+                  <DualDatePicker
+                    value={searchForm.date}
+                    onChange={(date) =>
+                      setSearchForm({ ...searchForm, date })
+                    }
+                    minDate={minDate}
+                    placeholder="Select date"
+                  />
                 </div>
               </div>
 
@@ -285,8 +281,8 @@ export function UserHome() {
                 {/* Min/Max limits */}
                 <div className="space-y-1 text-sm opacity-90">
                   <p>
-                    📅 Valid: {new Date(offer.validFrom).toLocaleDateString()} –{' '}
-                    {new Date(offer.validUntil).toLocaleDateString()}
+                    📅 Valid: {getDualDate(offer.validFrom)} –{' '}
+                    {getDualDate(offer.validUntil)}
                   </p>
                   {offer.minBookingAmount ? (
                     <p>💰 Minimum booking: ₹{offer.minBookingAmount}</p>

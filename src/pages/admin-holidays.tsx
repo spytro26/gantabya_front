@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { FaCalendarTimes, FaPlus, FaTrash } from 'react-icons/fa';
 import AdminLayout from '../components/AdminLayout';
+import DualDatePicker from '../components/DualDatePicker';
 import api from '../lib/api';
+import { getDualDateDisplay } from '../utils/nepaliDateConverter';
 
 interface Bus {
   id: string;
@@ -21,6 +23,7 @@ const HolidayManagement: React.FC = () => {
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [currentDatePick, setCurrentDatePick] = useState<string>('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -118,12 +121,8 @@ const HolidayManagement: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const dual = getDualDateDisplay(dateString);
+    return `${dual.ad} (${dual.bs})`;
   };
 
   return (
@@ -196,41 +195,37 @@ const HolidayManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => {
-                    const dateStr = e.target.value;
-                    if (dateStr && !holidays.some(h => h.date.split('T')[0] === dateStr)) {
+                <DualDatePicker
+                  value={currentDatePick}
+                  onChange={(dateStr) => {
+                    setCurrentDatePick(dateStr);
+                    if (dateStr && !holidays.some(h => h.date.split('T')[0] === dateStr) && !selectedDates.includes(dateStr)) {
                       handleDateToggle(dateStr);
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  minDate={new Date().toISOString().split('T')[0]}
                 />
                 {selectedDates.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm font-medium text-gray-700 mb-2">Selected Dates:</p>
                     <div className="flex flex-wrap gap-2">
-                      {selectedDates.map((dateStr) => (
-                        <div
-                          key={dateStr}
-                          className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-lg text-sm"
-                        >
-                          <span>
-                            {new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </span>
-                          <button
-                            onClick={() => handleDateToggle(dateStr)}
-                            className="ml-2 text-red-600 hover:text-red-800 font-bold"
+                      {selectedDates.map((dateStr) => {
+                        const dual = getDualDateDisplay(dateStr);
+                        return (
+                          <div
+                            key={dateStr}
+                            className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-lg text-sm"
                           >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                            <span>{dual.ad} ({dual.bs})</span>
+                            <button
+                              onClick={() => handleDateToggle(dateStr)}
+                              className="ml-2 text-red-600 hover:text-red-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
