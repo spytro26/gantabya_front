@@ -150,11 +150,6 @@ const AdminBookingsReport: React.FC = () => {
     return `${dual.ad} (${dual.bs})`;
   };
 
-  const _formatDateShort = (dateString: string) => {
-    const dual = getDualDateDisplay(dateString);
-    return dual.ad;
-  };
-
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-IN', {
       hour: '2-digit',
