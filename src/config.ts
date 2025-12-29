@@ -17,7 +17,7 @@ export const API_ENDPOINTS = {
   PAYMENTS_VERIFY: "/user/payments/verify",
   PAYMENTS_CONFIRM: "/user/payments/confirm",
   MY_BOOKINGS: "/user/mybookings",
-  CANCEL_TICKET: "/user/cancelticket",
+  // CANCEL_TICKET: "/user/cancelticket", // DISABLED
   DOWNLOAD_TICKET: "/user/booking/download-ticket", // + /:groupId
 
   // User Notifications

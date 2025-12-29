@@ -9,7 +9,6 @@ import {
   FaMapMarkerAlt,
   FaRupeeSign,
   FaCalendar,
-  FaTimesCircle,
   FaTicketAlt,
   FaDownload,
 } from 'react-icons/fa';
@@ -155,27 +154,6 @@ export function MyBookings() {
     fetchBookings(nextPage, false);
   };
 
-  const handleCancelBooking = async (bookingGroupId: string) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) {
-      return;
-    }
-
-    try {
-      await api.post(API_ENDPOINTS.CANCEL_TICKET, {
-        bookingGroupId,
-      });
-      alert('Booking cancelled successfully');
-      // Reset to first page
-      setPage(1);
-      fetchBookings(1, true);
-    } catch (err: any) {
-      alert(
-        err.response?.data?.errorMessage ||
-          'Failed to cancel booking. Please try again.'
-      );
-    }
-  };
-
   const handleDownloadTicket = async (bookingGroupId: string) => {
     try {
       const response = await api.get(
@@ -225,16 +203,6 @@ export function MyBookings() {
         {status}
       </span>
     );
-  };
-
-  const canCancelBooking = (booking: Booking) => {
-    // ✅ FIX: Parse YYYY-MM-DD string correctly
-    const [year, month, day] = booking.trip.tripDate.split('-').map(Number);
-    const tripDate = new Date(year, month - 1, day);
-    const now = new Date();
-    const hoursDiff = (tripDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    return booking.status === 'CONFIRMED' && hoursDiff > 2;
   };
 
   return (
@@ -471,16 +439,6 @@ export function MyBookings() {
                       >
                         <FaDownload />
                         Download Ticket
-                      </button>
-                    )}
-                    {/* Cancel Button - Only for CONFIRMED bookings that can be cancelled */}
-                    {booking.status === 'CONFIRMED' && canCancelBooking(booking) && (
-                      <button
-                        onClick={() => handleCancelBooking(booking.bookingGroupId)}
-                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium flex items-center gap-2"
-                      >
-                        <FaTimesCircle />
-                        Cancel Booking
                       </button>
                     )}
                   </div>
